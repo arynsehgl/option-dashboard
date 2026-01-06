@@ -85,23 +85,31 @@ function App() {
   const filteredStrikes = useMemo(() => {
     if (!data?.data?.records?.data) return [];
     
-    const strikes = data.data.records.data;
+    // First filter out any invalid strikes
+    const strikes = (data.data.records.data || []).filter(
+      (strike) => strike && strike.strikePrice != null
+    );
+    
+    if (strikes.length === 0) return [];
+    
     const spotPrice = parseFloat(data.data.records.underlyingValue || 0);
     
     // Filter by strike range
     let filtered = strikes.filter((strike) => {
+      if (!strike || strike.strikePrice == null) return false;
       const diff = Math.abs(strike.strikePrice - spotPrice);
       const maxDiff = strikeRange * 50; // Each strike is typically 50 apart
       return diff <= maxDiff;
     });
     
     // Filter by high OI if enabled
-    if (showHighOI) {
+    if (showHighOI && filtered.length > 0) {
       // Calculate average OI
-      const avgCEOI = filtered.reduce((sum, s) => sum + (s.CE?.openInterest || 0), 0) / filtered.length;
-      const avgPEOI = filtered.reduce((sum, s) => sum + (s.PE?.openInterest || 0), 0) / filtered.length;
+      const avgCEOI = filtered.reduce((sum, s) => sum + (s?.CE?.openInterest || 0), 0) / filtered.length;
+      const avgPEOI = filtered.reduce((sum, s) => sum + (s?.PE?.openInterest || 0), 0) / filtered.length;
       
       filtered = filtered.filter((strike) => {
+        if (!strike) return false;
         const ceOI = strike.CE?.openInterest || 0;
         const peOI = strike.PE?.openInterest || 0;
         return ceOI > avgCEOI * 1.5 || peOI > avgPEOI * 1.5;

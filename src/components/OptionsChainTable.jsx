@@ -8,15 +8,30 @@ import { formatLargeNumber, formatCurrency, formatPercentageChange } from '../ut
 export default function OptionsChainTable({ data, spotPrice }) {
   if (!data?.data?.records?.data) return null;
 
-  const strikes = data.data.records.data;
+  // Filter out any undefined or invalid strikes
+  const strikes = (data.data.records.data || []).filter(
+    (strike) => strike && strike.strikePrice != null
+  );
+
+  if (strikes.length === 0) {
+    return (
+      <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 text-center">
+        <p className="text-slate-400">No strike data available</p>
+      </div>
+    );
+  }
+
   const atmStrike = parseFloat(spotPrice || data.data.records.underlyingValue || 0);
 
   // Find closest strike to ATM
   const findATMStrikeIndex = () => {
+    if (strikes.length === 0) return 0;
+    
     let closestIndex = 0;
-    let minDiff = Math.abs(strikes[0].strikePrice - atmStrike);
+    let minDiff = Math.abs((strikes[0]?.strikePrice || 0) - atmStrike);
     
     strikes.forEach((strike, index) => {
+      if (!strike || strike.strikePrice == null) return;
       const diff = Math.abs(strike.strikePrice - atmStrike);
       if (diff < minDiff) {
         minDiff = diff;

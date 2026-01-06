@@ -8,16 +8,30 @@ import { Bar } from 'react-chartjs-2'
 export default function Charts({ data }) {
   if (!data?.data?.records?.data) return null;
 
-  const strikes = data.data.records.data;
+  // Filter out any undefined or invalid strikes
+  const strikes = (data.data.records.data || []).filter(
+    (strike) => strike && strike.strikePrice != null
+  );
+
+  if (strikes.length === 0) {
+    return (
+      <div className="mt-6">
+        <h2 className="text-2xl font-bold mb-4 text-white">CHARTS & ANALYTICS</h2>
+        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700 text-center">
+          <p className="text-slate-400">No chart data available</p>
+        </div>
+      </div>
+    );
+  }
 
   // Prepare data for charts
-  const strikePrices = strikes.map(s => s.strikePrice);
-  const callOI = strikes.map(s => (s.CE?.openInterest || 0) / 100000); // Convert to Lakhs
-  const putOI = strikes.map(s => (s.PE?.openInterest || 0) / 100000);
-  const callChangeOI = strikes.map(s => (s.CE?.changeinOpenInterest || 0) / 100000);
-  const putChangeOI = strikes.map(s => (s.PE?.changeinOpenInterest || 0) / 100000);
-  const callVolume = strikes.map(s => (s.CE?.totalTradedVolume || 0) / 100000);
-  const putVolume = strikes.map(s => (s.PE?.totalTradedVolume || 0) / 100000);
+  const strikePrices = strikes.map(s => s?.strikePrice || 0).filter(Boolean);
+  const callOI = strikes.map(s => ((s?.CE?.openInterest || 0) / 100000)); // Convert to Lakhs
+  const putOI = strikes.map(s => ((s?.PE?.openInterest || 0) / 100000));
+  const callChangeOI = strikes.map(s => ((s?.CE?.changeinOpenInterest || 0) / 100000));
+  const putChangeOI = strikes.map(s => ((s?.PE?.changeinOpenInterest || 0) / 100000));
+  const callVolume = strikes.map(s => ((s?.CE?.totalTradedVolume || 0) / 100000));
+  const putVolume = strikes.map(s => ((s?.PE?.totalTradedVolume || 0) / 100000));
 
   // Chart options
   const commonOptions = {
