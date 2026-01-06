@@ -10,6 +10,7 @@ import {
   Legend,
 } from 'chart.js'
 import App from './App'
+import ErrorBoundary from './components/ErrorBoundary'
 import './index.css'
 
 // Register Chart.js components
@@ -24,7 +25,9 @@ ChartJS.register(
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>,
 )
 

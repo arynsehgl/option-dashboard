@@ -34,6 +34,12 @@ function App() {
 
     try {
       const result = await fetchOptionChainData(symbol)
+      
+      // Validate result structure
+      if (!result || !result.data) {
+        throw new Error('Invalid data structure received')
+      }
+      
       setData(result)
       
       // Set first expiry date as default if not set
@@ -41,8 +47,10 @@ function App() {
         setExpiryDate(result.data.records.expiryDates[0])
       }
     } catch (err) {
+      console.error('Error loading data:', err)
       setError(err.message || 'Failed to fetch data')
-      console.error('Error:', err)
+      // Don't crash - show error but keep UI visible
+      // The API proxy will fallback to mock data, so we should still have data
     } finally {
       setLoading(false)
       setIsRefreshing(false)

@@ -31,11 +31,22 @@ export async function fetchOptionChainData(symbol = 'NIFTY') {
     }
 
     if (USE_EXPRESS_SERVER) {
-      return await fetchViaExpressServer(symbol);
+      try {
+        return await fetchViaExpressServer(symbol);
+      } catch (error) {
+        console.warn('Express server failed, falling back to mock data:', error.message);
+        return generateMockData(symbol);
+      }
     }
 
     if (USE_NETLIFY_FUNCTION) {
-      return await fetchViaNetlifyFunction(symbol);
+      try {
+        return await fetchViaNetlifyFunction(symbol);
+      } catch (error) {
+        console.warn('Netlify function failed, falling back to mock data:', error.message);
+        // Fallback to mock data instead of crashing
+        return generateMockData(symbol);
+      }
     }
 
     // Fallback to mock data
@@ -43,7 +54,9 @@ export async function fetchOptionChainData(symbol = 'NIFTY') {
     return generateMockData(symbol);
   } catch (error) {
     console.error('Error fetching option chain data:', error);
-    throw error;
+    // Always return mock data as fallback instead of throwing
+    console.warn('Falling back to mock data due to error');
+    return generateMockData(symbol);
   }
 }
 
@@ -72,19 +85,38 @@ async function fetchViaExpressServer(symbol) {
  */
 async function fetchViaNetlifyFunction(symbol) {
   const url = `/.netlify/functions/fetchNSEData?symbol=${symbol}`;
-  const response = await fetch(url);
   
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+  try {
+    const response = await fetch(url);
+    
+    // Handle 404 - function not found
+    if (response.status === 404) {
+      throw new Error('Netlify Function not found (404). Make sure the function is deployed.');
+    }
+    
+    // Check content type
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      throw new Error(`Unexpected response type: ${contentType}. Response: ${text.substring(0, 100)}`);
+    }
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'No error details');
+      throw new Error(`HTTP error! status: ${response.status}. ${errorText.substring(0, 200)}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch option chain data');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Netlify Function error:', error);
+    throw error; // Re-throw to be caught by parent try-catch
   }
-  
-  const result = await response.json();
-  
-  if (!result.success) {
-    throw new Error(result.error || 'Failed to fetch option chain data');
-  }
-  
-  return result;
 }
 
 // Removed fetchViaProxy - using mock data for development instead
