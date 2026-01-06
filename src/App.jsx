@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { fetchOptionChainData } from './utils/api-proxy'
+import { fetchOptionChainData, fetchMockData } from './utils/api-proxy'
 import Header from './components/Header'
 import Filters from './components/Filters'
 import OptionsChainTable from './components/OptionsChainTable'
@@ -23,23 +23,68 @@ function App() {
   const [notifications, setNotifications] = useState([])
   const [previousMetrics, setPreviousMetrics] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [showUseTestDataOption, setShowUseTestDataOption] = useState(false)
 
-  // Fetch data
+  // Fetch data - REAL DATA ONLY
   const loadData = async (silent = false) => {
     if (!silent) {
       setLoading(true)
       setIsRefreshing(true)
     }
     setError(null)
+    setShowUseTestDataOption(false)
 
     try {
       const result = await fetchOptionChainData(symbol)
       
+      // Log result for debugging
+      console.log('Real data loaded:', {
+        hasResult: !!result,
+        hasData: !!result?.data,
+        hasRecords: !!result?.data?.records,
+        hasRecordsData: !!result?.data?.records?.data,
+        recordsDataLength: result?.data?.records?.data?.length || 0,
+        symbol: result?.symbol
+      });
+      
       // Validate result structure
       if (!result || !result.data) {
+        console.error('Invalid result structure:', result);
         throw new Error('Invalid data structure received')
       }
       
+      // Check if we have strike data
+      const strikes = result?.data?.records?.data || [];
+      if (strikes.length === 0) {
+        throw new Error('No strike data available in response')
+      }
+      
+      setData(result)
+      setShowUseTestDataOption(false) // Hide test data option on success
+      
+      // Set first expiry date as default if not set
+      if (result?.data?.records?.expiryDates?.length > 0 && !expiryDate) {
+        setExpiryDate(result.data.records.expiryDates[0])
+      }
+    } catch (err) {
+      console.error('Error loading real data:', err)
+      setError(err.message || 'Failed to fetch real data from NSE')
+      setShowUseTestDataOption(true) // Show option to use test data
+      setData(null) // Clear any previous data
+    } finally {
+      setLoading(false)
+      setIsRefreshing(false)
+    }
+  }
+
+  // Load test/mock data - explicitly called by user
+  const loadTestData = async () => {
+    setLoading(true)
+    setError(null)
+    setShowUseTestDataOption(false)
+
+    try {
+      const result = await fetchMockData(symbol)
       setData(result)
       
       // Set first expiry date as default if not set
@@ -47,13 +92,9 @@ function App() {
         setExpiryDate(result.data.records.expiryDates[0])
       }
     } catch (err) {
-      console.error('Error loading data:', err)
-      setError(err.message || 'Failed to fetch data')
-      // Don't crash - show error but keep UI visible
-      // The API proxy will fallback to mock data, so we should still have data
+      setError(err.message || 'Failed to load test data')
     } finally {
       setLoading(false)
-      setIsRefreshing(false)
     }
   }
 
@@ -237,14 +278,29 @@ function App() {
         {/* Error State */}
         {error && !loading && (
           <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold text-red-400 mb-2">Error</h2>
+            <h2 className="text-xl font-semibold text-red-400 mb-2">Failed to Fetch Real Data</h2>
             <p className="text-red-300 mb-4">{error}</p>
-            <button
-              onClick={loadData}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md text-white font-medium"
-            >
-              Retry
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={loadData}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md text-white font-medium"
+              >
+                Retry Real Data
+              </button>
+              {showUseTestDataOption && (
+                <button
+                  onClick={loadTestData}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white font-medium"
+                >
+                  Use Test Data Instead
+                </button>
+              )}
+            </div>
+            {showUseTestDataOption && (
+              <p className="text-sm text-slate-400 mt-3">
+                💡 Test data shows how the dashboard works with sample NSE option chain data
+              </p>
+            )}
           </div>
         )}
 
