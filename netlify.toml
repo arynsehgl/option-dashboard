@@ -1,0 +1,22 @@
+# Netlify configuration file
+# This tells Netlify how to build and deploy your site
+
+[build]
+  # Directory where the built frontend files will be
+  publish = "dist"
+  # Command to build the frontend
+  command = "npm run build"
+
+# Netlify Functions configuration
+# Serverless functions will be in the netlify/functions directory
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Redirects - SPA routing
+# Note: Netlify automatically handles function routes, so we don't need to redirect them
+# Functions are automatically excluded from this redirect
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
