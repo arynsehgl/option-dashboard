@@ -20,12 +20,13 @@ const NETLIFY_FUNCTION_PATH = "/.netlify/functions/fetchNSEData";
  * Throws error if fetch fails (no auto-fallback)
  *
  * @param {string} symbol - 'NIFTY' or 'BANKNIFTY' (default: 'NIFTY')
+ * @param {string} expiry - Optional expiry date (e.g., '13-Jan-2026')
  * @returns {Promise<Object>} - Option chain data from NSE
  */
-export async function fetchOptionChainData(symbol = "NIFTY") {
+export async function fetchOptionChainData(symbol = "NIFTY", expiry = "") {
   // Try Netlify Function first
   if (USE_NETLIFY_FUNCTION) {
-    return await fetchViaNetlifyFunction(symbol);
+    return await fetchViaNetlifyFunction(symbol, expiry);
   }
 
   // Try Express Server
@@ -72,8 +73,11 @@ async function fetchViaExpressServer(symbol) {
 /**
  * Fetch via Netlify Function (for production)
  */
-async function fetchViaNetlifyFunction(symbol) {
-  const url = `/.netlify/functions/fetchNSEData?symbol=${symbol}`;
+async function fetchViaNetlifyFunction(symbol, expiry = "") {
+  let url = `/.netlify/functions/fetchNSEData?symbol=${symbol}`;
+  if (expiry) {
+    url += `&expiry=${encodeURIComponent(expiry)}`;
+  }
 
   // Check if we're in local dev (not using netlify dev)
   const isLocalDev =

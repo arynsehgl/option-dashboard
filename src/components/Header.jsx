@@ -23,7 +23,7 @@ export default function Header({ symbol, onSymbolChange, spotPrice, lastUpdated,
 
           {/* Index Selector Tabs */}
           <div className="flex gap-1 bg-slate-700 rounded-lg p-1">
-            {['NIFTY', 'BANKNIFTY', 'FINNIFTY'].map((sym) => (
+            {['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY'].map((sym) => (
               <button
                 key={sym}
                 onClick={() => onSymbolChange(sym)}

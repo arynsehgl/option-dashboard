@@ -5,11 +5,28 @@
 
 /**
  * Generate mock option chain data
- * @param {string} symbol - 'NIFTY' or 'BANKNIFTY'
+ * @param {string} symbol - 'NIFTY', 'BANKNIFTY', 'FINNIFTY', or 'MIDCPNIFTY'
  * @returns {Object} Mock data matching NSE API structure
  */
 export function generateMockData(symbol = 'NIFTY') {
-  const baseStrike = symbol === 'NIFTY' ? 23750 : 47500;
+  // Set base strike price based on symbol
+  let baseStrike;
+  switch (symbol.toUpperCase()) {
+    case 'NIFTY':
+      baseStrike = 23750;
+      break;
+    case 'BANKNIFTY':
+      baseStrike = 47500;
+      break;
+    case 'FINNIFTY':
+      baseStrike = 20000;
+      break;
+    case 'MIDCPNIFTY':
+      baseStrike = 12000;
+      break;
+    default:
+      baseStrike = 23750;
+  }
   const strikes = [];
   
   // Generate strikes around base price

@@ -35,7 +35,7 @@ function App() {
     setShowUseTestDataOption(false)
 
     try {
-      const result = await fetchOptionChainData(symbol)
+      const result = await fetchOptionChainData(symbol, expiryDate)
       
       // Log result for debugging
       console.log('Real data loaded:', {
@@ -108,6 +108,14 @@ function App() {
     loadData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol])
+
+  // Reload data when expiry date changes (but only if expiry date is set)
+  useEffect(() => {
+    if (expiryDate) {
+      loadData(true) // Silent reload when expiry changes
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expiryDate])
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
