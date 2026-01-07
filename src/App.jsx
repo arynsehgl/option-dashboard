@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { fetchOptionChainData, fetchMockData } from './utils/api-proxy'
+import { getLotSize } from './utils/lotSizes'
 import Header from './components/Header'
 import Filters from './components/Filters'
 import OptionsChainTable from './components/OptionsChainTable'
@@ -176,21 +177,26 @@ function App() {
   // Get expiry dates
   const expiryDates = data?.data?.records?.expiryDates || [];
 
-  // Calculate key metrics from actual data if not present
+  // Calculate key metrics from filtered strikes (respects strike range, high OI filter, and lot multiplier)
   const calculatedMetrics = useMemo(() => {
-    if (!data?.data?.records?.data) return null;
+    if (!filteredStrikes || filteredStrikes.length === 0) return null;
 
-    const strikes = data.data.records.data || [];
+    const lotSize = getLotSize(symbol);
     
     let totalCEOI = 0;
     let totalPEOI = 0;
 
-    strikes.forEach((strike) => {
-      if (strike?.CE?.openInterest) {
-        totalCEOI += strike.CE.openInterest;
-      }
-      if (strike?.PE?.openInterest) {
-        totalPEOI += strike.PE.openInterest;
+    filteredStrikes.forEach((strike) => {
+      const ceOI = strike?.CE?.openInterest || 0;
+      const peOI = strike?.PE?.openInterest || 0;
+      
+      // Apply lot multiplier if enabled
+      if (showLotMultiplier) {
+        totalCEOI += ceOI * lotSize;
+        totalPEOI += peOI * lotSize;
+      } else {
+        totalCEOI += ceOI;
+        totalPEOI += peOI;
       }
     });
 
@@ -199,15 +205,15 @@ function App() {
     const ceDominance = totalOI > 0 ? (totalCEOI / totalOI) * 100 : 50;
     const peDominance = totalOI > 0 ? (totalPEOI / totalOI) * 100 : 50;
 
-    // Calculate Max Pain (simplified - strike with minimum absolute difference from current price)
-    const spot = parseFloat(data.data.records.underlyingValue || 0);
+    // Calculate Max Pain (simplified - based on filtered strikes)
+    const spot = parseFloat(spotPrice || 0);
     let minPain = spot;
     let minPainValue = Infinity;
 
-    strikes.forEach((strike) => {
+    filteredStrikes.forEach((strike) => {
       if (!strike?.strikePrice) return;
-      const ceOI = strike.CE?.openInterest || 0;
-      const peOI = strike.PE?.openInterest || 0;
+      const ceOI = (strike.CE?.openInterest || 0) * (showLotMultiplier ? lotSize : 1);
+      const peOI = (strike.PE?.openInterest || 0) * (showLotMultiplier ? lotSize : 1);
       // Simplified max pain calculation
       const pain = Math.abs(strike.strikePrice - spot) * (ceOI + peOI);
       if (pain < minPainValue) {
@@ -224,7 +230,7 @@ function App() {
       ceDominance: ceDominance.toFixed(1),
       peDominance: peDominance.toFixed(1),
     };
-  }, [data]);
+  }, [filteredStrikes, showLotMultiplier, symbol, spotPrice]);
 
   // Check for key metric changes and trigger notifications
   useEffect(() => {
