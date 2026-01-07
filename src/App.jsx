@@ -18,6 +18,7 @@ function App() {
   const [strikeRange, setStrikeRange] = useState(10)
   const [expiryDate, setExpiryDate] = useState('')
   const [showHighOI, setShowHighOI] = useState(false)
+  const [showLotMultiplier, setShowLotMultiplier] = useState(false) // Disabled by default
   
   // Notification and refresh states
   const [notifications, setNotifications] = useState([])
@@ -175,6 +176,56 @@ function App() {
   // Get expiry dates
   const expiryDates = data?.data?.records?.expiryDates || [];
 
+  // Calculate key metrics from actual data if not present
+  const calculatedMetrics = useMemo(() => {
+    if (!data?.data?.records?.data) return null;
+
+    const strikes = data.data.records.data || [];
+    
+    let totalCEOI = 0;
+    let totalPEOI = 0;
+
+    strikes.forEach((strike) => {
+      if (strike?.CE?.openInterest) {
+        totalCEOI += strike.CE.openInterest;
+      }
+      if (strike?.PE?.openInterest) {
+        totalPEOI += strike.PE.openInterest;
+      }
+    });
+
+    const pcr = totalCEOI > 0 ? totalPEOI / totalCEOI : 0;
+    const totalOI = totalCEOI + totalPEOI;
+    const ceDominance = totalOI > 0 ? (totalCEOI / totalOI) * 100 : 50;
+    const peDominance = totalOI > 0 ? (totalPEOI / totalOI) * 100 : 50;
+
+    // Calculate Max Pain (simplified - strike with minimum absolute difference from current price)
+    const spot = parseFloat(data.data.records.underlyingValue || 0);
+    let minPain = spot;
+    let minPainValue = Infinity;
+
+    strikes.forEach((strike) => {
+      if (!strike?.strikePrice) return;
+      const ceOI = strike.CE?.openInterest || 0;
+      const peOI = strike.PE?.openInterest || 0;
+      // Simplified max pain calculation
+      const pain = Math.abs(strike.strikePrice - spot) * (ceOI + peOI);
+      if (pain < minPainValue) {
+        minPainValue = pain;
+        minPain = strike.strikePrice;
+      }
+    });
+
+    return {
+      pcr,
+      maxPain: minPain,
+      totalCEOI,
+      totalPEOI,
+      ceDominance: ceDominance.toFixed(1),
+      peDominance: peDominance.toFixed(1),
+    };
+  }, [data]);
+
   // Check for key metric changes and trigger notifications
   useEffect(() => {
     if (!data?.metrics || !previousMetrics) {
@@ -272,7 +323,7 @@ function App() {
       />
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-6">
+      <div className="max-w-[98vw] mx-auto px-1 sm:px-2 lg:px-3 py-4">
         {/* Loading State */}
         {loading && (
           <div className="flex items-center justify-center min-h-[400px]">
@@ -314,7 +365,7 @@ function App() {
 
         {/* Dashboard Content */}
         {data && !loading && (
-          <div className="grid grid-cols-12 gap-4">
+          <div className="grid grid-cols-12 gap-1 sm:gap-2 lg:gap-3">
             {/* Left Column - Filters */}
             <div className="col-span-12 lg:col-span-2">
               <Filters
@@ -325,11 +376,13 @@ function App() {
                 expiryDates={expiryDates}
                 showHighOI={showHighOI}
                 onShowHighOIChange={setShowHighOI}
+                showLotMultiplier={showLotMultiplier}
+                onShowLotMultiplierChange={setShowLotMultiplier}
               />
             </div>
 
             {/* Center Column - Options Chain Table */}
-            <div className="col-span-12 lg:col-span-7">
+            <div className="col-span-12 lg:col-span-8">
               <OptionsChainTable
                 data={{
                   ...data,
@@ -342,12 +395,14 @@ function App() {
                   },
                 }}
                 spotPrice={spotPrice}
+                symbol={symbol}
+                showLotMultiplier={showLotMultiplier}
               />
             </div>
 
             {/* Right Column - Key Metrics */}
-            <div className="col-span-12 lg:col-span-3">
-              <KeyMetrics data={data} metrics={data.metrics} />
+            <div className="col-span-12 lg:col-span-2">
+              <KeyMetrics data={data} metrics={data.metrics || calculatedMetrics} />
             </div>
           </div>
         )}

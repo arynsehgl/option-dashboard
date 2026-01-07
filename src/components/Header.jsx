@@ -16,8 +16,8 @@ export default function Header({ symbol, onSymbolChange, spotPrice, lastUpdated,
 
   return (
     <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-10">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="max-w-[98vw] mx-auto px-1 sm:px-2 lg:px-3 py-2 sm:py-3">
+        <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-3 lg:gap-4">
           {/* Title */}
           <h1 className="text-2xl font-bold text-white">Options Dashboard</h1>
 

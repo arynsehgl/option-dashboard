@@ -11,7 +11,9 @@ export default function Filters({
   onExpiryDateChange,
   expiryDates = [],
   showHighOI,
-  onShowHighOIChange 
+  onShowHighOIChange,
+  showLotMultiplier,
+  onShowLotMultiplierChange
 }) {
   return (
     <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
@@ -68,6 +70,22 @@ export default function Filters({
             />
             <span className="ml-2 text-sm text-slate-300">Show only high OI</span>
           </label>
+        </div>
+
+        {/* Lot Multiplier */}
+        <div>
+          <label className="flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showLotMultiplier}
+              onChange={(e) => onShowLotMultiplierChange(e.target.checked)}
+              className="w-4 h-4 bg-slate-700 border-slate-600 rounded focus:ring-2 focus:ring-blue-500 text-blue-600"
+            />
+            <span className="ml-2 text-sm text-slate-300">Show values × Lot size</span>
+          </label>
+          <p className="text-xs text-slate-400 mt-1 ml-6">
+            Multiply OI, Change OI, and Volume by lot size
+          </p>
         </div>
       </div>
     </div>
