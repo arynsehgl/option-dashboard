@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { fetchOptionChainData, fetchMockData } from './utils/api-proxy'
-import { getLotSize } from './utils/lotSizes'
+import { getLotSize, getStrikeInterval } from './utils/lotSizes'
 import Header from './components/Header'
 import Filters from './components/Filters'
 import OptionsChainTable from './components/OptionsChainTable'
@@ -19,7 +19,7 @@ function App() {
   const [strikeRange, setStrikeRange] = useState(10)
   const [expiryDate, setExpiryDate] = useState('')
   const [showHighOI, setShowHighOI] = useState(false)
-  const [showLotMultiplier, setShowLotMultiplier] = useState(false) // Disabled by default
+  const [showLotMultiplier, setShowLotMultiplier] = useState(true) // Enabled by default
   
   // Notification and refresh states
   const [notifications, setNotifications] = useState([])
@@ -145,11 +145,14 @@ function App() {
     
     const spotPrice = parseFloat(data.data.records.underlyingValue || 0);
     
+    // Get strike interval for this symbol (different indices have different intervals)
+    const strikeInterval = getStrikeInterval(symbol);
+    
     // Filter by strike range
     let filtered = strikes.filter((strike) => {
       if (!strike || strike.strikePrice == null) return false;
       const diff = Math.abs(strike.strikePrice - spotPrice);
-      const maxDiff = strikeRange * 50; // Each strike is typically 50 apart
+      const maxDiff = strikeRange * strikeInterval; // Use symbol-specific strike interval
       return diff <= maxDiff;
     });
     
@@ -168,7 +171,7 @@ function App() {
     }
     
     return filtered;
-  }, [data, strikeRange, showHighOI]);
+  }, [data, strikeRange, showHighOI, symbol]);
 
   // Get spot price
   const spotPrice = data?.data?.records?.underlyingValue || 0;
@@ -310,6 +313,12 @@ function App() {
     setNotifications((prev) => prev.filter((n) => n.id !== id))
   }
 
+  // Handle strike range change with minimum validation
+  const handleStrikeRangeChange = (value) => {
+    const newValue = Math.max(3, parseInt(value) || 3)
+    setStrikeRange(newValue)
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
       {/* Header */}
@@ -376,7 +385,7 @@ function App() {
             <div className="col-span-12 lg:col-span-2">
               <Filters
                 strikeRange={strikeRange}
-                onStrikeRangeChange={setStrikeRange}
+                onStrikeRangeChange={handleStrikeRangeChange}
                 expiryDate={expiryDate}
                 onExpiryDateChange={setExpiryDate}
                 expiryDates={expiryDates}

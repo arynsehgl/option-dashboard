@@ -127,12 +127,16 @@ export default function OptionsChainTable({ data, spotPrice, symbol, showLotMult
             const pe = row.PE;
 
             // Apply lot multiplier if enabled
+            // Ensure Change OI is properly parsed (handle NaN, null, undefined)
+            const ceChangeOIRaw = parseFloat(ce?.changeinOpenInterest) || 0;
+            const peChangeOIRaw = parseFloat(pe?.changeinOpenInterest) || 0;
+            
             const ceOIValue = showLotMultiplier 
               ? (ce?.openInterest || 0) * lotSize 
               : (ce?.openInterest || 0);
             const ceChangeOIValue = showLotMultiplier 
-              ? (ce?.changeinOpenInterest || 0) * lotSize 
-              : (ce?.changeinOpenInterest || 0);
+              ? ceChangeOIRaw * lotSize 
+              : ceChangeOIRaw;
             const ceVolumeValue = showLotMultiplier 
               ? (ce?.totalTradedVolume || 0) * lotSize 
               : (ce?.totalTradedVolume || 0);
@@ -141,8 +145,8 @@ export default function OptionsChainTable({ data, spotPrice, symbol, showLotMult
               ? (pe?.openInterest || 0) * lotSize 
               : (pe?.openInterest || 0);
             const peChangeOIValue = showLotMultiplier 
-              ? (pe?.changeinOpenInterest || 0) * lotSize 
-              : (pe?.changeinOpenInterest || 0);
+              ? peChangeOIRaw * lotSize 
+              : peChangeOIRaw;
             const peVolumeValue = showLotMultiplier 
               ? (pe?.totalTradedVolume || 0) * lotSize 
               : (pe?.totalTradedVolume || 0);
@@ -161,9 +165,36 @@ export default function OptionsChainTable({ data, spotPrice, symbol, showLotMult
             const peLTP = formatCurrency(pe?.lastPrice || 0);
             const peChange = formatPercentageChange(pe?.change || 0);
 
-            // Format Change in OI
-            const ceChangeOIFormatted = formatPercentageChange(ceChangeOI);
-            const peChangeOIFormatted = formatPercentageChange(peChangeOI);
+            // Format Change in OI - use large number format with sign and color
+            // Ensure values are numbers (handle NaN/undefined)
+            const ceChangeOINum = isNaN(ceChangeOI) ? 0 : ceChangeOI;
+            const peChangeOINum = isNaN(peChangeOI) ? 0 : peChangeOI;
+            
+            // Don't show + sign for zero values, always display the value
+            const ceChangeOIFormatted = {
+              formatted: ceChangeOINum === 0 
+                ? '0' 
+                : (ceChangeOINum > 0 ? '+' : '') + formatLargeNumber(ceChangeOINum),
+              color: ceChangeOINum > 0 ? 'text-green-400' : ceChangeOINum < 0 ? 'text-red-400' : 'text-slate-400'
+            };
+            const peChangeOIFormatted = {
+              formatted: peChangeOINum === 0 
+                ? '0' 
+                : (peChangeOINum > 0 ? '+' : '') + formatLargeNumber(peChangeOINum),
+              color: peChangeOINum > 0 ? 'text-green-400' : peChangeOINum < 0 ? 'text-red-400' : 'text-slate-400'
+            };
+            
+            // Debug logging for first strike (only in development)
+            if (index === 0 && symbol === 'SENSEX') {
+              console.log('Change OI Debug - First Strike:', {
+                ceRaw: ce?.changeinOpenInterest,
+                peRaw: pe?.changeinOpenInterest,
+                ceParsed: ceChangeOINum,
+                peParsed: peChangeOINum,
+                ceFormatted: ceChangeOIFormatted.formatted,
+                peFormatted: peChangeOIFormatted.formatted
+              });
+            }
 
             return (
               <div

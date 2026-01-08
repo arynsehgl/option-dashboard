@@ -4,18 +4,34 @@
 
 /**
  * Format large numbers (Lakhs/Crores)
+ * Values < 100,000: Display as-is with comma formatting
+ * Values >= 100,000 (1L): Display as XX.XXL
+ * Values >= 10,000,000 (1Cr): Display as XX.XXCr
  * @param {number} num - Number to format
  * @returns {string} Formatted string
  */
 export function formatLargeNumber(num) {
-  if (num >= 10000000) {
-    return (num / 10000000).toFixed(2) + 'Cr';
-  } else if (num >= 100000) {
-    return (num / 100000).toFixed(2) + 'L';
-  } else if (num >= 1000) {
-    return (num / 1000).toFixed(2) + 'K';
+  const value = parseFloat(num) || 0;
+  
+  // Handle negative numbers
+  const isNegative = value < 0;
+  const absValue = Math.abs(value);
+  
+  let formatted;
+  if (absValue >= 10000000) {
+    // >= 1 Crore: Display as XX.XXCr
+    formatted = (absValue / 10000000).toFixed(2) + 'Cr';
+  } else if (absValue >= 100000) {
+    // >= 1 Lakh: Display as XX.XXL
+    formatted = (absValue / 100000).toFixed(2) + 'L';
+  } else {
+    // < 1 Lakh: Display as-is with comma formatting
+    formatted = absValue.toLocaleString('en-IN', {
+      maximumFractionDigits: 0
+    });
   }
-  return num.toLocaleString();
+  
+  return isNegative ? '-' + formatted : formatted;
 }
 
 /**

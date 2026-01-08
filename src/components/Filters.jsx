@@ -27,14 +27,14 @@ export default function Filters({
           </label>
           <input
             type="range"
-            min="5"
+            min="3"
             max="20"
             value={strikeRange}
             onChange={(e) => onStrikeRangeChange(parseInt(e.target.value))}
             className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
           />
           <div className="flex justify-between text-xs text-slate-400 mt-1">
-            <span>± 5</span>
+            <span>± 3</span>
             <span>± 20</span>
           </div>
         </div>

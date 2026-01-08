@@ -1,4 +1,5 @@
 import React from 'react'
+import { formatLargeNumber } from '../utils/formatNumber'
 
 /**
  * Key Metrics Panel
@@ -16,16 +17,6 @@ export default function KeyMetrics({ data, metrics }) {
   const totalOI = totalCEOI + totalPEOI;
   const ceDominance = totalOI > 0 ? ((totalCEOI / totalOI) * 100).toFixed(1) : '0.0';
   const peDominance = totalOI > 0 ? ((totalPEOI / totalOI) * 100).toFixed(1) : '0.0';
-
-  // Format large numbers
-  const formatNumber = (num) => {
-    if (num >= 10000000) {
-      return (num / 10000000).toFixed(2) + 'Cr';
-    } else if (num >= 100000) {
-      return (num / 100000).toFixed(2) + 'L';
-    }
-    return num.toLocaleString();
-  };
 
   // PCR sentiment
   const pcrSentiment = pcr > 1.2 ? 'Bullish' : pcr < 0.8 ? 'Bearish' : 'Neutral';
@@ -52,13 +43,13 @@ export default function KeyMetrics({ data, metrics }) {
         {/* Total CE OI */}
         <div>
           <div className="text-sm text-slate-400 mb-1">TOTAL CE OI</div>
-          <div className="text-2xl font-bold text-green-400">{formatNumber(totalCEOI)}</div>
+          <div className="text-2xl font-bold text-green-400">{formatLargeNumber(totalCEOI)}</div>
         </div>
 
         {/* Total PE OI */}
         <div>
           <div className="text-sm text-slate-400 mb-1">TOTAL PE OI</div>
-          <div className="text-2xl font-bold text-red-400">{formatNumber(totalPEOI)}</div>
+          <div className="text-2xl font-bold text-red-400">{formatLargeNumber(totalPEOI)}</div>
         </div>
 
         {/* CE VS PE DOMINANCE */}
