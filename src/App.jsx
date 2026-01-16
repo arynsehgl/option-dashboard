@@ -7,6 +7,8 @@ import OptionsChainTable from './components/OptionsChainTable'
 import KeyMetrics from './components/KeyMetrics'
 import Charts from './components/Charts'
 import Notifications from './components/Notifications'
+import Loader from './components/Loader'
+import Footer from './components/Footer'
 
 function App() {
   // State management
@@ -26,6 +28,31 @@ function App() {
   const [previousMetrics, setPreviousMetrics] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showUseTestDataOption, setShowUseTestDataOption] = useState(false)
+  const [showInitialLoader, setShowInitialLoader] = useState(true)
+  
+  // Theme state
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('theme')
+    return saved ? saved === 'dark' : true // Default to dark
+  })
+
+  // Toggle theme
+  const toggleTheme = () => {
+    setIsDarkMode(prev => {
+      const newTheme = !prev
+      localStorage.setItem('theme', newTheme ? 'dark' : 'light')
+      return newTheme
+    })
+  }
+
+  // Apply theme to document
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [isDarkMode])
 
   // Fetch data - REAL DATA ONLY
   const loadData = async (silent = false) => {
@@ -402,7 +429,16 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100">
+    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${
+      isDarkMode 
+        ? 'bg-slate-900 text-slate-100' 
+        : 'bg-gray-50 text-gray-900'
+    }`} data-theme={isDarkMode ? 'dark' : 'light'}>
+      {/* Initial Loader */}
+      {showInitialLoader && (
+        <Loader onComplete={() => setShowInitialLoader(false)} isDarkMode={isDarkMode} />
+      )}
+
       {/* Header */}
       <Header
         symbol={symbol}
@@ -411,6 +447,7 @@ function App() {
         lastUpdated={lastUpdated}
         onRefresh={handleManualRefresh}
         isRefreshing={isRefreshing}
+        onThemeToggle={toggleTheme}
       />
 
       {/* Notifications */}
@@ -419,6 +456,11 @@ function App() {
         onDismiss={handleDismissNotification}
       />
 
+      {/* Key Metrics Bar - Compact Horizontal Layout */}
+      {data && !loading && (
+        <KeyMetrics data={data} metrics={data.metrics || calculatedMetrics} compact={true} />
+      )}
+
       {/* Main Content */}
       <div className="max-w-[98vw] mx-auto px-1 sm:px-2 lg:px-3 py-4">
         {/* Loading State */}
@@ -426,16 +468,16 @@ function App() {
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-              <p className="text-slate-400">Loading option chain data...</p>
+              <p className="text-gray-600 dark:text-slate-400">Loading option chain data...</p>
             </div>
           </div>
         )}
 
         {/* Error State */}
         {error && !loading && (
-          <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold text-red-400 mb-2">Failed to Fetch Real Data</h2>
-            <p className="text-red-300 mb-4">{error}</p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/50 rounded-lg p-6 mb-6">
+            <h2 className="text-xl font-semibold text-red-600 dark:text-red-400 mb-2">Failed to Fetch Real Data</h2>
+            <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
             <div className="flex gap-3">
               <button
                 onClick={loadData}
@@ -479,7 +521,7 @@ function App() {
             </div>
 
             {/* Center Column - Options Chain Table */}
-            <div className="col-span-12 lg:col-span-8">
+            <div className="col-span-12 lg:col-span-10">
               <OptionsChainTable
                 data={{
                   ...data,
@@ -496,19 +538,17 @@ function App() {
                 showLotMultiplier={showLotMultiplier}
               />
             </div>
-
-            {/* Right Column - Key Metrics */}
-            <div className="col-span-12 lg:col-span-2">
-              <KeyMetrics data={data} metrics={data.metrics || calculatedMetrics} />
-            </div>
           </div>
         )}
 
         {/* Charts Section */}
         {data && !loading && (
-          <Charts data={data} />
+          <Charts data={data} isDarkMode={isDarkMode} />
         )}
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   )
 }

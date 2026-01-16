@@ -5,7 +5,7 @@ import { Bar } from 'react-chartjs-2'
  * Charts Component
  * Displays three charts: Open Interest vs Strike, Change in OI, and Volume Analysis
  */
-export default function Charts({ data }) {
+export default function Charts({ data, isDarkMode = true }) {
   if (!data?.data?.records?.data) return null;
 
   // Filter out any undefined or invalid strikes
@@ -33,7 +33,7 @@ export default function Charts({ data }) {
   const callVolume = strikes.map(s => ((s?.CE?.totalTradedVolume || 0) / 100000));
   const putVolume = strikes.map(s => ((s?.PE?.totalTradedVolume || 0) / 100000));
 
-  // Chart options
+  // Chart options - theme aware
   const commonOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -41,24 +41,24 @@ export default function Charts({ data }) {
       legend: {
         position: 'top',
         labels: {
-          color: '#e2e8f0',
+          color: isDarkMode ? '#e2e8f0' : '#1f2937',
           font: {
             size: 12,
           },
         },
       },
       tooltip: {
-        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-        titleColor: '#e2e8f0',
-        bodyColor: '#e2e8f0',
-        borderColor: '#475569',
+        backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.95)',
+        titleColor: isDarkMode ? '#e2e8f0' : '#1f2937',
+        bodyColor: isDarkMode ? '#e2e8f0' : '#1f2937',
+        borderColor: isDarkMode ? '#475569' : '#d1d5db',
         borderWidth: 1,
       },
     },
     scales: {
       x: {
         ticks: {
-          color: '#94a3b8',
+          color: isDarkMode ? '#94a3b8' : '#6b7280',
           font: {
             size: 10,
           },
@@ -66,12 +66,12 @@ export default function Charts({ data }) {
           minRotation: 45,
         },
         grid: {
-          color: 'rgba(148, 163, 184, 0.1)',
+          color: isDarkMode ? 'rgba(148, 163, 184, 0.1)' : 'rgba(107, 114, 128, 0.1)',
         },
       },
       y: {
         ticks: {
-          color: '#94a3b8',
+          color: isDarkMode ? '#94a3b8' : '#6b7280',
           font: {
             size: 10,
           },
@@ -80,7 +80,7 @@ export default function Charts({ data }) {
           },
         },
         grid: {
-          color: 'rgba(148, 163, 184, 0.1)',
+          color: isDarkMode ? 'rgba(148, 163, 184, 0.1)' : 'rgba(107, 114, 128, 0.1)',
         },
       },
     },
@@ -114,7 +114,7 @@ export default function Charts({ data }) {
       title: {
         display: true,
         text: 'Open Interest vs Strike',
-        color: '#f1f5f9',
+        color: isDarkMode ? '#f1f5f9' : '#111827',
         font: {
           size: 16,
           weight: 'bold',
@@ -151,7 +151,7 @@ export default function Charts({ data }) {
       title: {
         display: true,
         text: 'Change in Open Interest',
-        color: '#f1f5f9',
+        color: isDarkMode ? '#f1f5f9' : '#111827',
         font: {
           size: 16,
           weight: 'bold',
@@ -200,7 +200,7 @@ export default function Charts({ data }) {
       title: {
         display: true,
         text: 'Volume Analysis',
-        color: '#f1f5f9',
+        color: isDarkMode ? '#f1f5f9' : '#111827',
         font: {
           size: 16,
           weight: 'bold',
@@ -211,25 +211,25 @@ export default function Charts({ data }) {
 
   return (
     <div className="mt-6">
-      <h2 className="text-2xl font-bold mb-4 text-white">CHARTS & ANALYTICS</h2>
+      <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">CHARTS & ANALYTICS</h2>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Chart 1: Open Interest vs Strike */}
-        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+        <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700 shadow-sm dark:shadow-none">
           <div className="h-80">
             <Bar data={oiChartData} options={oiChartOptions} />
           </div>
         </div>
 
         {/* Chart 2: Change in Open Interest */}
-        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+        <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700 shadow-sm dark:shadow-none">
           <div className="h-80">
             <Bar data={changeOIChartData} options={changeOIChartOptions} />
           </div>
         </div>
 
         {/* Chart 3: Volume Analysis */}
-        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700 lg:col-span-2">
+        <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700 shadow-sm dark:shadow-none lg:col-span-2">
           <div className="h-80">
             <Bar data={volumeChartData} options={volumeChartOptions} />
           </div>

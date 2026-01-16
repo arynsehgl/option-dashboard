@@ -16,8 +16,8 @@ export default function OptionsChainTable({ data, spotPrice, symbol, showLotMult
 
   if (strikes.length === 0) {
     return (
-      <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 text-center">
-        <p className="text-slate-400">No strike data available</p>
+      <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6 text-center shadow-sm dark:shadow-none">
+        <p className="text-gray-500 dark:text-slate-400">No strike data available</p>
       </div>
     );
   }
@@ -86,10 +86,10 @@ export default function OptionsChainTable({ data, spotPrice, symbol, showLotMult
   }, [strikes, showLotMultiplier, lotSize]);
 
   return (
-    <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-x-auto">
+    <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-x-auto shadow-sm dark:shadow-none">
       <div className="min-w-full">
         {/* Table Header */}
-        <div className="grid grid-cols-11 gap-0.5 bg-slate-700 p-1.5 text-[10px] sm:text-xs font-semibold text-slate-300 sticky top-0">
+        <div className="grid grid-cols-11 gap-0.5 bg-slate-200 dark:bg-slate-700 p-1.5 text-[10px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 sticky top-0 shadow-sm">
           {/* CALLS Header */}
           <div className="col-span-5 text-center">
             <div className="text-green-400 mb-0.5 text-[10px] sm:text-xs">CALLS (CE)</div>
@@ -107,7 +107,7 @@ export default function OptionsChainTable({ data, spotPrice, symbol, showLotMult
           
           {/* PUTS Header */}
           <div className="col-span-5 text-center">
-            <div className="text-red-400 mb-0.5 text-[10px] sm:text-xs">PUTS (PE)</div>
+            <div className="text-red-500 dark:text-red-400 mb-0.5 text-[10px] sm:text-xs">PUTS (PE)</div>
             <div className="grid grid-cols-5 gap-0.5 text-[9px] sm:text-[10px]">
               <div>CHNG</div>
               <div>LTP</div>
@@ -199,25 +199,25 @@ export default function OptionsChainTable({ data, spotPrice, symbol, showLotMult
             return (
               <div
                 key={strike}
-                className={`grid grid-cols-11 gap-1 p-1.5 sm:p-2 hover:bg-slate-700/50 transition-colors ${
-                  isATM ? 'bg-blue-900/30 border-l-2 border-blue-500' : ''
+                className={`grid grid-cols-11 gap-1 p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors ${
+                  isATM ? 'bg-slate-200 dark:bg-slate-700' : ''
                 }`}
               >
                 {/* CALLS Data */}
                 <div className="col-span-5 grid grid-cols-5 gap-0.5 text-right">
-                  <div className="text-green-400 px-1 text-[11px] sm:text-xs" title={ceOI}>{ceOI}</div>
+                  <div className="text-green-500 dark:text-green-400 px-1 text-[11px] sm:text-xs" title={ceOI}>{ceOI}</div>
                   <div className={`${ceChangeOIFormatted.color} px-1 text-[11px] sm:text-xs`} title={ceChangeOIFormatted.formatted}>
                     {ceChangeOIFormatted.formatted}
                   </div>
-                  <div className="text-slate-300 px-1 text-[11px] sm:text-xs" title={ceVolume}>{ceVolume}</div>
-                  <div className="text-slate-200 font-medium px-1 text-[11px] sm:text-xs" title={ceLTP}>{ceLTP}</div>
+                  <div className="text-gray-600 dark:text-slate-300 px-1 text-[11px] sm:text-xs" title={ceVolume}>{ceVolume}</div>
+                  <div className="text-gray-800 dark:text-slate-200 font-medium px-1 text-[11px] sm:text-xs" title={ceLTP}>{ceLTP}</div>
                   <div className={`${ceChange.color} px-1 text-[11px] sm:text-xs`} title={ceChange.formatted}>{ceChange.formatted}</div>
                 </div>
 
                 {/* STRIKE */}
                 <div
                   className={`col-span-1 text-center font-bold px-1 ${
-                    isATM ? 'text-blue-400' : 'text-white'
+                    isATM ? 'text-blue-500 dark:text-blue-400' : 'text-gray-900 dark:text-white'
                   }`}
                 >
                   {isATM && (
@@ -229,12 +229,12 @@ export default function OptionsChainTable({ data, spotPrice, symbol, showLotMult
                 {/* PUTS Data */}
                 <div className="col-span-5 grid grid-cols-5 gap-0.5 text-left">
                   <div className={`${peChange.color} px-1 text-[11px] sm:text-xs`} title={peChange.formatted}>{peChange.formatted}</div>
-                  <div className="text-slate-200 font-medium px-1 text-[11px] sm:text-xs" title={peLTP}>{peLTP}</div>
-                  <div className="text-slate-300 px-1 text-[11px] sm:text-xs" title={peVolume}>{peVolume}</div>
+                  <div className="text-gray-800 dark:text-slate-200 font-medium px-1 text-[11px] sm:text-xs" title={peLTP}>{peLTP}</div>
+                  <div className="text-gray-600 dark:text-slate-300 px-1 text-[11px] sm:text-xs" title={peVolume}>{peVolume}</div>
                   <div className={`${peChangeOIFormatted.color} px-1 text-[11px] sm:text-xs`} title={peChangeOIFormatted.formatted}>
                     {peChangeOIFormatted.formatted}
                   </div>
-                  <div className="text-red-400 px-1 text-[11px] sm:text-xs" title={peOI}>{peOI}</div>
+                  <div className="text-red-500 dark:text-red-400 px-1 text-[11px] sm:text-xs" title={peOI}>{peOI}</div>
                 </div>
               </div>
             );
@@ -242,42 +242,42 @@ export default function OptionsChainTable({ data, spotPrice, symbol, showLotMult
         </div>
 
         {/* Bottom Summary Bar */}
-        <div className="sticky bottom-0 bg-slate-900 border-t-2 border-slate-600 p-1.5 mt-1">
+        <div className="sticky bottom-0 bg-gray-50 dark:bg-slate-900 border-t-2 border-gray-200 dark:border-slate-600 p-1.5 mt-1">
           <div className="grid grid-cols-11 gap-0.5 text-[10px] sm:text-xs font-semibold">
             {/* CALLS Totals */}
             <div className="col-span-5 grid grid-cols-5 gap-1 text-right">
-              <div className="text-green-400 px-1 text-[11px] sm:text-xs" title={formatLargeNumber(totals.totalCEOI)}>
+              <div className="text-green-500 dark:text-green-400 px-1 text-[11px] sm:text-xs" title={formatLargeNumber(totals.totalCEOI)}>
                 {formatLargeNumber(totals.totalCEOI)}
               </div>
-              <div className={`${totals.totalCEChangeOI >= 0 ? 'text-green-400' : 'text-red-400'} px-1 text-[11px] sm:text-xs`} title={formatLargeNumber(Math.abs(totals.totalCEChangeOI))}>
+              <div className={`${totals.totalCEChangeOI >= 0 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'} px-1 text-[11px] sm:text-xs`} title={formatLargeNumber(Math.abs(totals.totalCEChangeOI))}>
                 {formatLargeNumber(Math.abs(totals.totalCEChangeOI))}
                 {totals.totalCEChangeOI >= 0 ? ' ↑' : ' ↓'}
               </div>
-              <div className="text-slate-300">-</div>
-              <div className="text-slate-300">-</div>
-              <div className="text-slate-300">-</div>
+              <div className="text-gray-600 dark:text-slate-300">-</div>
+              <div className="text-gray-600 dark:text-slate-300">-</div>
+              <div className="text-gray-600 dark:text-slate-300">-</div>
             </div>
 
             {/* Label */}
-            <div className="col-span-1 text-center text-slate-400 font-bold text-[10px] sm:text-xs">
+            <div className="col-span-1 text-center text-gray-600 dark:text-slate-400 font-bold text-[10px] sm:text-xs">
               TOTALS
             </div>
 
             {/* PUTS Totals */}
             <div className="col-span-5 grid grid-cols-5 gap-1 text-left">
-              <div className="text-slate-300">-</div>
-              <div className="text-slate-300">-</div>
-              <div className="text-slate-300">-</div>
-              <div className={`${totals.totalPEChangeOI >= 0 ? 'text-green-400' : 'text-red-400'} px-1 text-[11px] sm:text-xs`} title={formatLargeNumber(Math.abs(totals.totalPEChangeOI))}>
+              <div className="text-gray-600 dark:text-slate-300">-</div>
+              <div className="text-gray-600 dark:text-slate-300">-</div>
+              <div className="text-gray-600 dark:text-slate-300">-</div>
+              <div className={`${totals.totalPEChangeOI >= 0 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400'} px-1 text-[11px] sm:text-xs`} title={formatLargeNumber(Math.abs(totals.totalPEChangeOI))}>
                 {totals.totalPEChangeOI >= 0 ? '↑ ' : '↓ '}
                 {formatLargeNumber(Math.abs(totals.totalPEChangeOI))}
               </div>
-              <div className="text-red-400 px-1 text-[11px] sm:text-xs" title={formatLargeNumber(totals.totalPEOI)}>
+              <div className="text-red-500 dark:text-red-400 px-1 text-[11px] sm:text-xs" title={formatLargeNumber(totals.totalPEOI)}>
                 {formatLargeNumber(totals.totalPEOI)}
               </div>
             </div>
           </div>
-          <div className="text-[10px] text-slate-500 text-center mt-1">
+          <div className="text-[10px] text-gray-500 dark:text-slate-500 text-center mt-1">
             {showLotMultiplier ? `Values multiplied by lot size (${lotSize})` : 'Raw values'}
           </div>
         </div>

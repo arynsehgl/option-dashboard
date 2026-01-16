@@ -10,8 +10,17 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.dark {
   background-color: #0f172a; /* Dark background for finance dashboard */
   color: #f1f5f9; /* Light text */
+}
+
+body:not(.dark) {
+  background-color: #f9fafb; /* Light background */
+  color: #111827; /* Dark text */
 }
 
 * {

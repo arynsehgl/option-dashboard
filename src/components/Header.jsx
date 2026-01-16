@@ -1,10 +1,19 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 /**
  * Header Component
  * Displays dashboard title, index selector, spot price, and last updated time
  */
-export default function Header({ symbol, onSymbolChange, spotPrice, lastUpdated, onRefresh, isRefreshing }) {
+export default function Header({ symbol, onSymbolChange, spotPrice, lastUpdated, onRefresh, isRefreshing, onThemeToggle }) {
+  const [isBouncing, setIsBouncing] = useState(false)
+
+  const handleLogoClick = () => {
+    setIsBouncing(true)
+    setTimeout(() => setIsBouncing(false), 600)
+    if (onThemeToggle) {
+      onThemeToggle()
+    }
+  }
   const formats = {
     time: { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }
   };
@@ -15,41 +24,103 @@ export default function Header({ symbol, onSymbolChange, spotPrice, lastUpdated,
   };
 
   return (
-    <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-10">
-      <div className="max-w-[98vw] mx-auto px-1 sm:px-2 lg:px-3 py-2 sm:py-3">
+    <header className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 sticky top-0 z-10 shadow-sm dark:shadow-none">
+      <div className="max-w-[98vw] mx-auto px-1 sm:px-2 lg:px-3 py-2 sm:py-3 relative">
         <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-3 lg:gap-4">
-          {/* Title */}
-          <h1 className="text-2xl font-bold text-white">Options Dashboard</h1>
-
-          {/* Index Selector Tabs */}
-          <div className="flex gap-1 bg-slate-700 rounded-lg p-1">
-            {['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY', 'SENSEX'].map((sym) => (
-              <button
-                key={sym}
-                onClick={() => onSymbolChange(sym)}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                  symbol === sym
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-600'
-                }`}
+          {/* Left: Logo and Title */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Logo - Clickable with bounce effect */}
+            <button
+              onClick={handleLogoClick}
+              className="flex-shrink-0 cursor-pointer transition-transform hover:scale-110 active:scale-95"
+              title="Click to toggle theme"
+            >
+              <svg
+                width="40"
+                height="40"
+                viewBox="0 0 40 40"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className={`text-blue-500 ${isBouncing ? 'animate-bounce-deep' : ''}`}
               >
-                {sym}
-              </button>
-            ))}
+                {/* Background circle */}
+                <circle cx="20" cy="20" r="18" fill="rgba(59, 130, 246, 0.1)" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="2"/>
+                {/* Up arrow (Calls) */}
+                <path
+                  d="M20 8 L26 16 L22 16 L22 24 L18 24 L18 16 L14 16 Z"
+                  fill="rgba(16, 185, 129, 0.9)"
+                  stroke="rgba(16, 185, 129, 1)"
+                  strokeWidth="1.5"
+                />
+                {/* Down arrow (Puts) */}
+                <path
+                  d="M20 32 L26 24 L22 24 L22 16 L18 16 L18 24 L14 24 Z"
+                  fill="rgba(239, 68, 68, 0.9)"
+                  stroke="rgba(239, 68, 68, 1)"
+                  strokeWidth="1.5"
+                />
+                {/* Center line (Strike) */}
+                <line x1="12" y1="20" x2="28" y2="20" stroke="rgba(59, 130, 246, 0.6)" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
+            {/* Title */}
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center">
+              <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
+                StrikeView
+              </span>
+            </h1>
           </div>
 
-          {/* Spot Price and Last Updated */}
-          <div className="flex items-center gap-6">
+          {/* Center: Index Selector Tabs - Positioned to center on page */}
+          <div className="absolute left-1/2 transform -translate-x-1/2 hidden md:block">
+            <div className="flex gap-1 bg-slate-200 dark:bg-slate-700 rounded-lg p-1 shadow-sm">
+              {['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY', 'SENSEX'].map((sym) => (
+                <button
+                  key={sym}
+                  onClick={() => onSymbolChange(sym)}
+                  className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
+                    symbol === sym
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-300 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  {sym}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Mobile: Index Selector Tabs - Centered between title and right section */}
+          <div className="flex-1 flex items-center justify-center md:hidden">
+            <div className="flex gap-1 bg-slate-200 dark:bg-slate-700 rounded-lg p-1 shadow-sm">
+              {['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY', 'SENSEX'].map((sym) => (
+                <button
+                  key={sym}
+                  onClick={() => onSymbolChange(sym)}
+                  className={`px-3 py-2 rounded-md text-xs font-medium transition-all ${
+                    symbol === sym
+                      ? 'bg-blue-600 text-white shadow-lg'
+                      : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-300 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  {sym}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: Spot Price and Last Updated */}
+          <div className="flex items-center gap-2 sm:gap-3">
             {spotPrice && (
               <div className="text-right">
-                <div className="text-xs text-slate-400">Spot Price</div>
-                <div className="text-lg font-bold text-white">
+                <div className="text-xs text-gray-500 dark:text-slate-400">Spot Price</div>
+                <div className="text-lg font-bold text-gray-900 dark:text-white">
                   ₹{parseFloat(spotPrice).toFixed(2)}
                 </div>
               </div>
             )}
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               {/* Manual Refresh Button */}
               <button
                 onClick={onRefresh}
@@ -75,10 +146,10 @@ export default function Header({ symbol, onSymbolChange, spotPrice, lastUpdated,
 
               {/* Last Updated */}
               <div className="text-right">
-                <div className="text-xs text-slate-400">Last Updated</div>
-                <div className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                <div className="text-xs text-gray-500 dark:text-slate-400">Last Updated</div>
+                <div className="text-sm font-medium text-gray-700 dark:text-slate-300 flex items-center gap-2">
                   <span>{formatTime(lastUpdated)}</span>
-                  <span className="text-xs text-slate-500 hidden sm:inline">Auto: 30s</span>
+                  <span className="text-xs text-gray-400 dark:text-slate-500 hidden sm:inline">Auto: 30s</span>
                 </div>
               </div>
             </div>
