@@ -132,7 +132,7 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, symbol]) // Re-run when data or symbol changes
 
-  // Filter strikes based on range and high OI
+  // Filter strikes based on range and high OI - ATM centered
   const filteredStrikes = useMemo(() => {
     if (!data?.data?.records?.data) return [];
     
@@ -145,16 +145,75 @@ function App() {
     
     const spotPrice = parseFloat(data.data.records.underlyingValue || 0);
     
-    // Get strike interval for this symbol (different indices have different intervals)
-    const strikeInterval = getStrikeInterval(symbol);
+    // Sort strikes by price to ensure proper ordering
+    const sortedStrikes = [...strikes].sort((a, b) => 
+      (a.strikePrice || 0) - (b.strikePrice || 0)
+    );
     
-    // Filter by strike range
-    let filtered = strikes.filter((strike) => {
-      if (!strike || strike.strikePrice == null) return false;
+    // Find ATM strike (closest to spot price)
+    let atmIndex = 0;
+    let minDiff = Math.abs((sortedStrikes[0]?.strikePrice || 0) - spotPrice);
+    
+    sortedStrikes.forEach((strike, index) => {
+      if (!strike || strike.strikePrice == null) return;
       const diff = Math.abs(strike.strikePrice - spotPrice);
-      const maxDiff = strikeRange * strikeInterval; // Use symbol-specific strike interval
-      return diff <= maxDiff;
+      if (diff < minDiff) {
+        minDiff = diff;
+        atmIndex = index;
+      }
     });
+    
+    // Calculate how many strikes to show above and below ATM
+    // For N strikes total: floor((N-1)/2) above, ATM, ceil((N-1)/2) below
+    const totalStrikes = strikeRange;
+    const strikesAbove = Math.floor((totalStrikes - 1) / 2);
+    const strikesBelow = Math.ceil((totalStrikes - 1) / 2);
+    
+    // Select strikes symmetrically around ATM
+    // Try to get strikesAbove above and strikesBelow below ATM
+    let startIndex = Math.max(0, atmIndex - strikesAbove);
+    let endIndex = Math.min(sortedStrikes.length - 1, atmIndex + strikesBelow);
+    
+    // If we don't have enough strikes on one side, compensate from the other side
+    // while keeping ATM centered as much as possible
+    const currentCount = endIndex - startIndex + 1;
+    if (currentCount < totalStrikes) {
+      const needed = totalStrikes - currentCount;
+      if (startIndex === 0 && endIndex < sortedStrikes.length - 1) {
+        // Can't go higher, get more from below
+        endIndex = Math.min(sortedStrikes.length - 1, endIndex + needed);
+      } else if (endIndex === sortedStrikes.length - 1 && startIndex > 0) {
+        // Can't go lower, get more from above
+        startIndex = Math.max(0, startIndex - needed);
+      } else {
+        // Try to balance: get half from each side if possible
+        const fromBelow = Math.min(Math.floor(needed / 2), sortedStrikes.length - 1 - endIndex);
+        const fromAbove = Math.min(needed - fromBelow, startIndex);
+        startIndex = Math.max(0, startIndex - fromAbove);
+        endIndex = Math.min(sortedStrikes.length - 1, endIndex + fromBelow);
+      }
+    }
+    
+    // Ensure we have exactly the requested number of strikes (or as many as available)
+    let filtered = sortedStrikes.slice(startIndex, endIndex + 1);
+    
+    if (filtered.length > totalStrikes) {
+      // Re-center around ATM to get exactly totalStrikes
+      const atmInFilteredIndex = filtered.findIndex(s => 
+        s.strikePrice === sortedStrikes[atmIndex].strikePrice
+      );
+      
+      if (atmInFilteredIndex !== -1) {
+        const halfBefore = Math.floor((totalStrikes - 1) / 2);
+        const halfAfter = Math.ceil((totalStrikes - 1) / 2);
+        const newStart = Math.max(0, atmInFilteredIndex - halfBefore);
+        const newEnd = Math.min(filtered.length - 1, atmInFilteredIndex + halfAfter);
+        filtered = filtered.slice(newStart, newEnd + 1);
+      } else {
+        // Fallback: just take first totalStrikes
+        filtered = filtered.slice(0, totalStrikes);
+      }
+    }
     
     // Filter by high OI if enabled
     if (showHighOI && filtered.length > 0) {
@@ -162,12 +221,25 @@ function App() {
       const avgCEOI = filtered.reduce((sum, s) => sum + (s?.CE?.openInterest || 0), 0) / filtered.length;
       const avgPEOI = filtered.reduce((sum, s) => sum + (s?.PE?.openInterest || 0), 0) / filtered.length;
       
-      filtered = filtered.filter((strike) => {
+      const highOIFiltered = filtered.filter((strike) => {
         if (!strike) return false;
         const ceOI = strike.CE?.openInterest || 0;
         const peOI = strike.PE?.openInterest || 0;
         return ceOI > avgCEOI * 1.5 || peOI > avgPEOI * 1.5;
       });
+      
+      // If high OI filter removes too many strikes, we still need to maintain ATM-centered selection
+      // So we'll apply high OI filter but ensure ATM is included
+      if (highOIFiltered.length > 0) {
+        const atmStrike = sortedStrikes[atmIndex];
+        const hasATM = highOIFiltered.some(s => s.strikePrice === atmStrike.strikePrice);
+        if (!hasATM) {
+          highOIFiltered.push(atmStrike);
+          // Re-sort to maintain order
+          highOIFiltered.sort((a, b) => (a.strikePrice || 0) - (b.strikePrice || 0));
+        }
+        filtered = highOIFiltered;
+      }
     }
     
     return filtered;
@@ -188,18 +260,26 @@ function App() {
     
     let totalCEOI = 0;
     let totalPEOI = 0;
+    let totalCEChangeOI = 0;
+    let totalPEChangeOI = 0;
 
     filteredStrikes.forEach((strike) => {
       const ceOI = strike?.CE?.openInterest || 0;
       const peOI = strike?.PE?.openInterest || 0;
+      const ceChangeOI = strike?.CE?.changeinOpenInterest || 0;
+      const peChangeOI = strike?.PE?.changeinOpenInterest || 0;
       
       // Apply lot multiplier if enabled
       if (showLotMultiplier) {
         totalCEOI += ceOI * lotSize;
         totalPEOI += peOI * lotSize;
+        totalCEChangeOI += ceChangeOI * lotSize;
+        totalPEChangeOI += peChangeOI * lotSize;
       } else {
         totalCEOI += ceOI;
         totalPEOI += peOI;
+        totalCEChangeOI += ceChangeOI;
+        totalPEChangeOI += peChangeOI;
       }
     });
 
@@ -230,6 +310,8 @@ function App() {
       maxPain: minPain,
       totalCEOI,
       totalPEOI,
+      totalCEChangeOI,
+      totalPEChangeOI,
       ceDominance: ceDominance.toFixed(1),
       peDominance: peDominance.toFixed(1),
     };

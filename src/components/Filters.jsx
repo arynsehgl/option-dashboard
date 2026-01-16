@@ -23,7 +23,7 @@ export default function Filters({
         {/* Strike Range */}
         <div>
           <label className="block text-sm text-slate-300 mb-2">
-            Strike Range: ± {strikeRange} strikes
+            Number of Strikes: {strikeRange} (ATM centered)
           </label>
           <input
             type="range"
@@ -34,8 +34,8 @@ export default function Filters({
             className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
           />
           <div className="flex justify-between text-xs text-slate-400 mt-1">
-            <span>± 3</span>
-            <span>± 20</span>
+            <span>3</span>
+            <span>20</span>
           </div>
         </div>
 

@@ -1,4 +1,5 @@
 import React from 'react'
+import { Pie } from 'react-chartjs-2'
 import { formatLargeNumber } from '../utils/formatNumber'
 
 /**
@@ -12,11 +13,20 @@ export default function KeyMetrics({ data, metrics }) {
   const maxPain = metrics.maxPain || data.metrics?.maxPain || data.data?.records?.underlyingValue || 0;
   const totalCEOI = metrics.totalCEOI || data.metrics?.totalCEOI || 0;
   const totalPEOI = metrics.totalPEOI || data.metrics?.totalPEOI || 0;
+  const totalCEChangeOI = metrics.totalCEChangeOI || data.metrics?.totalCEChangeOI || 0;
+  const totalPEChangeOI = metrics.totalPEChangeOI || data.metrics?.totalPEChangeOI || 0;
   
   // Calculate dominance percentages
   const totalOI = totalCEOI + totalPEOI;
   const ceDominance = totalOI > 0 ? ((totalCEOI / totalOI) * 100).toFixed(1) : '0.0';
   const peDominance = totalOI > 0 ? ((totalPEOI / totalOI) * 100).toFixed(1) : '0.0';
+  
+  // Calculate Change in OI dominance (using absolute values for pie chart)
+  const absCEChangeOI = Math.abs(totalCEChangeOI);
+  const absPEChangeOI = Math.abs(totalPEChangeOI);
+  const totalAbsChangeOI = absCEChangeOI + absPEChangeOI;
+  const ceChangeOIDominance = totalAbsChangeOI > 0 ? ((absCEChangeOI / totalAbsChangeOI) * 100).toFixed(1) : '0.0';
+  const peChangeOIDominance = totalAbsChangeOI > 0 ? ((absPEChangeOI / totalAbsChangeOI) * 100).toFixed(1) : '0.0';
 
   // PCR sentiment
   const pcrSentiment = pcr > 1.2 ? 'Bullish' : pcr < 0.8 ? 'Bearish' : 'Neutral';
@@ -70,6 +80,86 @@ export default function KeyMetrics({ data, metrics }) {
                 style={{ width: `${peDominance}%` }}
               />
             </div>
+          </div>
+        </div>
+
+        {/* CHANGE IN OI */}
+        <div>
+          <div className="text-sm text-slate-400 mb-2">CHANGE IN OI</div>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className={totalCEChangeOI >= 0 ? 'text-green-400' : 'text-red-400'}>
+                CE: {totalCEChangeOI >= 0 ? '+' : ''}{formatLargeNumber(totalCEChangeOI)}
+              </span>
+              <span className={totalPEChangeOI >= 0 ? 'text-green-400' : 'text-red-400'}>
+                PE: {totalPEChangeOI >= 0 ? '+' : ''}{formatLargeNumber(totalPEChangeOI)}
+              </span>
+            </div>
+            
+            {/* Pie Chart for Change in OI Distribution */}
+            {totalAbsChangeOI > 0 && (
+              <div className="flex items-center justify-center">
+                <div className="w-32 h-32">
+                  <Pie
+                    key={`change-oi-${totalCEChangeOI}-${totalPEChangeOI}`}
+                    data={{
+                      labels: ['CE Change OI', 'PE Change OI'],
+                      datasets: [
+                        {
+                          data: [absCEChangeOI, absPEChangeOI],
+                          backgroundColor: [
+                            'rgba(16, 185, 129, 0.8)', // Green for CE (Calls)
+                            'rgba(239, 68, 68, 0.8)',  // Red for PE (Puts)
+                          ],
+                          borderColor: [
+                            'rgba(16, 185, 129, 1)', // Green for CE (Calls)
+                            'rgba(239, 68, 68, 1)',  // Red for PE (Puts)
+                          ],
+                          borderWidth: 2,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: true,
+                      animation: {
+                        duration: 0,
+                      },
+                      plugins: {
+                        legend: {
+                          display: false,
+                        },
+                        tooltip: {
+                          backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                          titleColor: '#e2e8f0',
+                          bodyColor: '#e2e8f0',
+                          borderColor: '#475569',
+                          borderWidth: 1,
+                          callbacks: {
+                            label: function(context) {
+                              const absValue = context.parsed;
+                              const actualValue = context.label === 'CE Change OI' ? totalCEChangeOI : totalPEChangeOI;
+                              const percentage = totalAbsChangeOI > 0 
+                                ? ((absValue / totalAbsChangeOI) * 100).toFixed(1) 
+                                : '0.0';
+                              const sign = actualValue >= 0 ? '+' : '';
+                              return `${context.label}: ${sign}${formatLargeNumber(actualValue)} (${percentage}%)`;
+                            },
+                          },
+                        },
+                      },
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+            
+            {/* Fallback when no change in OI */}
+            {totalAbsChangeOI === 0 && (
+              <div className="text-center text-slate-500 text-xs py-4">
+                No Change in OI data
+              </div>
+            )}
           </div>
         </div>
       </div>
