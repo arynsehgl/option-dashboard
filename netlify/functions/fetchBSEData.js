@@ -151,19 +151,27 @@ exports.handler = async (event, context) => {
   };
 
   // Helper function to generate potential expiry dates
+  // Includes the *current* Thursday (same-day expiry) and next few Thursdays
   const generateExpiryDates = () => {
     const today = new Date();
     const dates = [];
-    
-    // Calculate this Thursday and next few Thursdays
+
     for (let week = 0; week < 4; week++) {
-      const daysUntilThursday = (4 - today.getDay() + 7) % 7 || 7;
-      const thursday = new Date(today);
-      thursday.setDate(today.getDate() + daysUntilThursday + (week * 7));
+      // Start from "today + week*7" and find the Thursday in that week
+      const baseDate = new Date(today);
+      baseDate.setDate(today.getDate() + week * 7);
+
+      // 4 = Thursday (0 = Sunday ... 6 = Saturday)
+      const dayOfWeek = baseDate.getDay();
+      const daysUntilThursday = (4 - dayOfWeek + 7) % 7; // 0 means "today is Thursday"
+
+      const thursday = new Date(baseDate);
+      thursday.setDate(baseDate.getDate() + daysUntilThursday);
       dates.push(formatDate(thursday));
     }
-    
-    return dates;
+
+    // De-duplicate just in case and return
+    return [...new Set(dates)];
   };
 
   // Helper function to fetch BSE data with a specific expiry
@@ -352,15 +360,22 @@ exports.handler = async (event, context) => {
     const timestamp = data.ASON?.DT_TM || new Date().toISOString();
 
     // Extract expiry dates from Table (each row has End_TimeStamp)
-    const expiryDates = [
+    const tableExpiryDates = [
       ...new Set(data.Table.map((row) => row.End_TimeStamp).filter(Boolean)),
     ].sort();
+
+    // Prefer expiry dates returned from BSE expiry API (if available),
+    // otherwise fall back to the single expiry present in the option chain Table.
+    const expiryDatesForResponse =
+      availableExpiries && availableExpiries.length > 0
+        ? availableExpiries
+        : tableExpiryDates;
 
     console.log(
       "Successfully fetched BSE data:",
       data.Table.length,
-      "strikes, expiry dates:",
-      expiryDates.length
+      "strikes, expiry dates returned to UI:",
+      expiryDatesForResponse.length
     );
 
     // Return successful response with BSE data structure
@@ -382,7 +397,8 @@ exports.handler = async (event, context) => {
           Table: data.Table,
           ASON: data.ASON,
           UlaValue: spotPrice,
-          expiryDates: expiryDates,
+          // This is what the transformer & UI use to build the expiry filter
+          expiryDates: expiryDatesForResponse,
           totals: {
             tot_C_Open_Interest: data.tot_C_Open_Interest,
             tot_Open_Interest: data.tot_Open_Interest,

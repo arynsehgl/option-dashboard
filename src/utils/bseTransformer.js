@@ -1,6 +1,6 @@
 /**
  * BSE to NSE Data Transformer
- * 
+ *
  * Converts BSE API response format to NSE format so the frontend
  * can use the same structure for both exchanges.
  */
@@ -17,18 +17,19 @@ function safeParseFloat(value, defaultValue = 0) {
   if (value == null || value === undefined) {
     return defaultValue;
   }
-  
+
   // Handle empty string
-  if (typeof value === 'string' && value.trim() === '') {
+  if (typeof value === "string" && value.trim() === "") {
     return defaultValue;
   }
-  
+
   // Remove commas from string numbers (e.g., "1,234.56")
-  const cleanedValue = typeof value === 'string' ? value.replace(/,/g, '') : value;
-  
+  const cleanedValue =
+    typeof value === "string" ? value.replace(/,/g, "") : value;
+
   // Parse to float
   const parsed = parseFloat(cleanedValue);
-  
+
   // Return parsed value if valid, otherwise default
   return isNaN(parsed) ? defaultValue : parsed;
 }
@@ -47,89 +48,85 @@ export function transformBSEToNSE(bseResponse) {
   const table = bseData.Table || [];
 
   // Transform each strike from BSE format to NSE format
-  const transformedStrikes = table.map((bseRow) => {
-    // Extract strike price (can be Strike_Price or Strike_Price1)
-    const strikePrice =
-      safeParseFloat(bseRow.Strike_Price?.replace(/,/g, ""), null) ||
-      safeParseFloat(bseRow.Strike_Price1?.replace(/,/g, ""), null) ||
-      null;
+  const transformedStrikes = table
+    .map((bseRow) => {
+      // Extract strike price (can be Strike_Price or Strike_Price1)
+      const strikePrice =
+        safeParseFloat(bseRow.Strike_Price?.replace(/,/g, ""), null) ||
+        safeParseFloat(bseRow.Strike_Price1?.replace(/,/g, ""), null) ||
+        null;
 
-    if (!strikePrice) {
-      return null; // Skip invalid strikes
-    }
+      if (!strikePrice) {
+        return null; // Skip invalid strikes
+      }
 
-    // Transform Call (CE) data - BSE uses C_ prefix
-    // Log first strike for debugging Change OI
-    const ceChangeOI = safeParseFloat(bseRow.C_Absolute_Change_OI);
-    const peChangeOI = safeParseFloat(bseRow.Absolute_Change_OI);
-    
-    if (table.indexOf(bseRow) === 0) {
-      console.log("BSE First Strike Change OI Debug:", {
-        C_Absolute_Change_OI: bseRow.C_Absolute_Change_OI,
-        Absolute_Change_OI: bseRow.Absolute_Change_OI,
-        parsedCEChangeOI: ceChangeOI,
-        parsedPEChangeOI: peChangeOI,
-        strikePrice: strikePrice
-      });
-    }
-    
-    const ce = {
-      strikePrice: strikePrice,
-      expiryDate: bseRow.End_TimeStamp || null,
-      openInterest: safeParseFloat(bseRow.C_Open_Interest),
-      changeinOpenInterest: ceChangeOI,
-      totalTradedVolume: safeParseFloat(bseRow.C_Vol_Traded),
-      lastPrice: safeParseFloat(bseRow.C_Last_Trd_Price),
-      change: safeParseFloat(bseRow.C_NetChange),
-      bidQty: safeParseFloat(bseRow.C_BIdQty),
-      bidprice: safeParseFloat(bseRow.C_BidPrice),
-      askPrice: safeParseFloat(bseRow.C_OfferPrice),
-      askQty: safeParseFloat(bseRow.C_OfferQty),
-      underlying: safeParseFloat(bseData.UlaValue),
-      impliedVolatility: safeParseFloat(bseRow.C_IV, null) || null,
-    };
+      // Transform Call (CE) data - BSE uses C_ prefix
+      // Log first strike for debugging Change OI
+      const ceChangeOI = safeParseFloat(bseRow.C_Absolute_Change_OI);
+      const peChangeOI = safeParseFloat(bseRow.Absolute_Change_OI);
 
-    // Transform Put (PE) data - BSE uses regular fields (no prefix)
-    const pe = {
-      strikePrice: strikePrice,
-      expiryDate: bseRow.End_TimeStamp || null,
-      openInterest: safeParseFloat(bseRow.Open_Interest),
-      changeinOpenInterest: peChangeOI,
-      totalTradedVolume: safeParseFloat(bseRow.Vol_Traded),
-      lastPrice: safeParseFloat(bseRow.Last_Trd_Price),
-      change: safeParseFloat(bseRow.NetChange),
-      bidQty: safeParseFloat(bseRow.BIdQty),
-      bidprice: safeParseFloat(bseRow.BidPrice),
-      askPrice: safeParseFloat(bseRow.OfferPrice),
-      askQty: safeParseFloat(bseRow.OfferQty),
-      underlying: safeParseFloat(bseData.UlaValue),
-      impliedVolatility: safeParseFloat(bseRow.IV, null) || null,
-    };
+      if (table.indexOf(bseRow) === 0) {
+        console.log("BSE First Strike Change OI Debug:", {
+          C_Absolute_Change_OI: bseRow.C_Absolute_Change_OI,
+          Absolute_Change_OI: bseRow.Absolute_Change_OI,
+          parsedCEChangeOI: ceChangeOI,
+          parsedPEChangeOI: peChangeOI,
+          strikePrice: strikePrice,
+        });
+      }
 
-    // Return NSE-compatible strike structure
-    return {
-      strikePrice: strikePrice,
-      expiryDate: bseRow.End_TimeStamp || null,
-      CE: ce,
-      PE: pe,
-    };
-  }).filter(Boolean); // Remove null entries
+      const ce = {
+        strikePrice: strikePrice,
+        expiryDate: bseRow.End_TimeStamp || null,
+        openInterest: safeParseFloat(bseRow.C_Open_Interest),
+        changeinOpenInterest: ceChangeOI,
+        totalTradedVolume: safeParseFloat(bseRow.C_Vol_Traded),
+        lastPrice: safeParseFloat(bseRow.C_Last_Trd_Price),
+        change: safeParseFloat(bseRow.C_NetChange),
+        bidQty: safeParseFloat(bseRow.C_BIdQty),
+        bidprice: safeParseFloat(bseRow.C_BidPrice),
+        askPrice: safeParseFloat(bseRow.C_OfferPrice),
+        askQty: safeParseFloat(bseRow.C_OfferQty),
+        underlying: safeParseFloat(bseData.UlaValue),
+        impliedVolatility: safeParseFloat(bseRow.C_IV, null) || null,
+      };
+
+      // Transform Put (PE) data - BSE uses regular fields (no prefix)
+      const pe = {
+        strikePrice: strikePrice,
+        expiryDate: bseRow.End_TimeStamp || null,
+        openInterest: safeParseFloat(bseRow.Open_Interest),
+        changeinOpenInterest: peChangeOI,
+        totalTradedVolume: safeParseFloat(bseRow.Vol_Traded),
+        lastPrice: safeParseFloat(bseRow.Last_Trd_Price),
+        change: safeParseFloat(bseRow.NetChange),
+        bidQty: safeParseFloat(bseRow.BIdQty),
+        bidprice: safeParseFloat(bseRow.BidPrice),
+        askPrice: safeParseFloat(bseRow.OfferPrice),
+        askQty: safeParseFloat(bseRow.OfferQty),
+        underlying: safeParseFloat(bseData.UlaValue),
+        impliedVolatility: safeParseFloat(bseRow.IV, null) || null,
+      };
+
+      // Return NSE-compatible strike structure
+      return {
+        strikePrice: strikePrice,
+        expiryDate: bseRow.End_TimeStamp || null,
+        CE: ce,
+        PE: pe,
+      };
+    })
+    .filter(Boolean); // Remove null entries
 
   // Extract expiry dates
   const expiryDates =
     bseData.expiryDates ||
-    [
-      ...new Set(
-        table.map((row) => row.End_TimeStamp).filter(Boolean)
-      ),
-    ].sort();
+    [...new Set(table.map((row) => row.End_TimeStamp).filter(Boolean))].sort();
 
   // Extract spot price
   const underlyingValue =
     parseFloat(bseData.UlaValue) ||
-    (table.length > 0
-      ? parseFloat(table[0].UlaValue)
-      : null);
+    (table.length > 0 ? parseFloat(table[0].UlaValue) : null);
 
   // Format timestamp
   let timestamp = new Date().toISOString();
@@ -163,4 +160,3 @@ export function transformBSEToNSE(bseResponse) {
     },
   };
 }
-

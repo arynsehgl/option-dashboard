@@ -5,10 +5,13 @@ import {
   CategoryScale,
   LinearScale,
   BarElement,
+  LineElement,
+  PointElement,
   ArcElement,
   Title,
   Tooltip,
   Legend,
+  Filler,
 } from 'chart.js'
 import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -19,10 +22,13 @@ ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
+  LineElement,
+  PointElement,
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  Filler
 )
 
 // Apply theme on initial load

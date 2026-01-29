@@ -1,9 +1,9 @@
 import React from 'react'
-import { Bar } from 'react-chartjs-2'
+import { Bar, Line } from 'react-chartjs-2'
 
 /**
  * Charts Component
- * Displays three charts: Open Interest vs Strike, Change in OI, and Volume Analysis
+ * Displays line chart (Change in OI), plus bar charts: OI vs Strike, Change in OI, Volume Analysis
  */
 export default function Charts({ data, isDarkMode = true }) {
   if (!data?.data?.records?.data) return null;
@@ -172,6 +172,63 @@ export default function Charts({ data, isDarkMode = true }) {
     },
   };
 
+  // Line chart: Change in OI (CE + PE) — single chart with two lines
+  const changeOILineChartData = {
+    labels: strikePrices,
+    datasets: [
+      {
+        label: 'CE Change in OI',
+        data: callChangeOI,
+        borderColor: 'rgba(16, 185, 129, 1)',
+        backgroundColor: 'rgba(16, 185, 129, 0.08)',
+        fill: true,
+        tension: 0.2,
+        pointRadius: 2,
+        pointHoverRadius: 5,
+        borderWidth: 2,
+      },
+      {
+        label: 'PE Change in OI',
+        data: putChangeOI,
+        borderColor: 'rgba(239, 68, 68, 1)',
+        backgroundColor: 'rgba(239, 68, 68, 0.08)',
+        fill: true,
+        tension: 0.2,
+        pointRadius: 2,
+        pointHoverRadius: 5,
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  const changeOILineChartOptions = {
+    ...commonOptions,
+    plugins: {
+      ...commonOptions.plugins,
+      title: {
+        display: true,
+        text: 'Change in OI (Line) — CE vs PE',
+        color: isDarkMode ? '#f1f5f9' : '#111827',
+        font: {
+          size: 16,
+          weight: 'bold',
+        },
+      },
+    },
+    scales: {
+      ...commonOptions.scales,
+      y: {
+        ...commonOptions.scales.y,
+        ticks: {
+          ...commonOptions.scales.y.ticks,
+          callback: function(value) {
+            return (value >= 0 ? '+' : '') + value.toFixed(1) + 'L';
+          },
+        },
+      },
+    },
+  };
+
   // Chart 3: Volume Analysis
   const volumeChartData = {
     labels: strikePrices,
@@ -213,6 +270,13 @@ export default function Charts({ data, isDarkMode = true }) {
     <div className="mt-6">
       <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">CHARTS & ANALYTICS</h2>
       
+      {/* Single Line Chart: Change in OI (CE + PE) */}
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700 shadow-sm dark:shadow-none mb-4">
+        <div className="h-80">
+          <Line data={changeOILineChartData} options={changeOILineChartOptions} />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Chart 1: Open Interest vs Strike */}
         <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700 shadow-sm dark:shadow-none">
@@ -221,7 +285,7 @@ export default function Charts({ data, isDarkMode = true }) {
           </div>
         </div>
 
-        {/* Chart 2: Change in Open Interest */}
+        {/* Chart 2: Change in Open Interest (Bar) */}
         <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700 shadow-sm dark:shadow-none">
           <div className="h-80">
             <Bar data={changeOIChartData} options={changeOIChartOptions} />
