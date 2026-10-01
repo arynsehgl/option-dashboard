@@ -13,11 +13,6 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# Run only the BSE data function near its upstream service in Asia.
-# All other functions retain the site's existing/default region.
-[functions.fetchBSEData]
-  region = "sin"
-
 # Redirects - SPA routing
 # Note: Netlify automatically handles function routes, so we don't need to redirect them
 # Functions are automatically excluded from this redirect
