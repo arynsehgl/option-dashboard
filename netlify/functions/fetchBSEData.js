@@ -112,7 +112,11 @@ exports.handler = async (event, context) => {
     return `${day} ${month} ${year}`;
   };
 
-  // Helper function to fetch available expiry dates from BSE API
+  /**
+   * Fetch the complete ordered expiry catalogue published by BSE.
+   *
+   * @returns {Promise<string[]|null>} Normalized expiry dates, or null when unavailable.
+   */
   const fetchAvailableExpiryDates = async () => {
     try {
       const expiryUrl = `${bseBaseUrl}/BseIndiaAPI/api/ddlExpiry_New/w?scrip_cd=${scripCd}`;
@@ -133,15 +137,30 @@ exports.handler = async (event, context) => {
           const data = await response.json();
           console.log("Available expiry dates response:", data);
           
-          // BSE might return expiry dates in different formats
-          // Common formats: array of strings, object with dates, etc.
+          let expiryValues = [];
+
           if (Array.isArray(data)) {
-            return data.filter(Boolean).map(date => date.trim());
-          } else if (data && typeof data === 'object') {
-            // Try to extract dates from object structure
-            const dates = Object.values(data).flat().filter(d => d && typeof d === 'string');
-            return dates.map(date => date.trim());
+            expiryValues = data.map((entry) =>
+              typeof entry === "string" ? entry : entry?.ExpiryDate
+            );
+          } else if (Array.isArray(data?.Table1)) {
+            expiryValues = data.Table1.map((entry) => entry?.ExpiryDate);
+          } else if (data && typeof data === "object") {
+            expiryValues = Object.values(data).flat().map((entry) =>
+              typeof entry === "string" ? entry : entry?.ExpiryDate
+            );
           }
+
+          const normalizedExpiries = [
+            ...new Set(
+              expiryValues
+                .filter((date) => typeof date === "string")
+                .map((date) => date.trim())
+                .filter(Boolean)
+            ),
+          ];
+
+          return normalizedExpiries.length > 0 ? normalizedExpiries : null;
         }
       }
     } catch (error) {
@@ -240,10 +259,15 @@ exports.handler = async (event, context) => {
     if (availableExpiries && availableExpiries.length > 0) {
       // Use expiry dates from BSE API if available
       console.log(`Found ${availableExpiries.length} expiry dates from BSE API:`, availableExpiries);
-      if (expiry) {
-        // If expiry provided, try it first, then use available dates
-        expiryDatesToTry = [expiry, ...availableExpiries];
+      const requestedExpiry = typeof expiry === "string" ? expiry.trim() : null;
+      if (requestedExpiry && availableExpiries.includes(requestedExpiry)) {
+        // If the requested expiry is still active, try it first without duplicating it.
+        expiryDatesToTry = [
+          requestedExpiry,
+          ...availableExpiries.filter((date) => date !== requestedExpiry),
+        ];
       } else {
+        // Expired or invalid selections fall back to the first active BSE expiry.
         expiryDatesToTry = availableExpiries;
       }
     } else {
@@ -428,4 +452,3 @@ exports.handler = async (event, context) => {
     };
   }
 };
-
