@@ -113,9 +113,73 @@ exports.handler = async (event, context) => {
   };
 
   /**
+   * Read a BSE response once and preserve the details needed to diagnose upstream failures.
+   *
+   * @param {Response} response Fetch response returned by a BSE endpoint.
+   * @returns {Promise<object>} Parsed payload plus HTTP and content diagnostics.
+   */
+  const inspectBseResponse = async (response) => {
+    const contentType = response.headers.get("content-type") || "unknown";
+    const responseText = await response.text();
+    const bodySnippet = responseText.replace(/\s+/g, " ").trim().substring(0, 300);
+    let data = null;
+    let parseError = null;
+
+    try {
+      data = JSON.parse(responseText);
+    } catch (error) {
+      parseError = error.message;
+    }
+
+    // Akamai denial pages can occasionally arrive with an imprecise content type.
+    const isHtml =
+      contentType.toLowerCase().includes("text/html") ||
+      /^\s*(?:<!doctype\s+html|<html)/i.test(responseText);
+
+    return {
+      status: response.status,
+      ok: response.ok,
+      contentType,
+      bodySnippet,
+      data,
+      isJson: parseError === null,
+      isHtml,
+      parseError,
+    };
+  };
+
+  /**
+   * Build an actionable error while keeping the upstream response body in server logs only.
+   *
+   * @param {string} operation Human-readable BSE operation that failed.
+   * @param {object} diagnostic Captured upstream response details.
+   * @returns {Error} Error marked as a Bad Gateway response.
+   */
+  const createBseUpstreamError = (operation, diagnostic) => {
+    console.error(`BSE upstream failure while ${operation}:`, diagnostic);
+
+    const statusLabel = diagnostic.status || "network error";
+    const contentTypeLabel = diagnostic.contentType || "unknown";
+    const error = new Error(
+      `BSE upstream access failed while ${operation} ` +
+        `(HTTP ${statusLabel}, content-type: ${contentTypeLabel}). ` +
+        "The BSE API denied access or returned a non-JSON response to the serverless function. " +
+        "Please retry shortly; if this persists, an approved BSE data feed is required."
+    );
+    error.code = "BSE_UPSTREAM_ACCESS_FAILED";
+    error.statusCode = 502;
+    error.upstreamDiagnostic = diagnostic;
+    return error;
+  };
+
+  /**
    * Fetch the complete ordered expiry catalogue published by BSE.
    *
-   * @returns {Promise<string[]|null>} Normalized expiry dates, or null when unavailable.
+   * A valid JSON response with no expiries is returned as an empty catalogue so the
+   * existing calculated-date fallback remains available. Access-denied, HTML, and
+   * other non-JSON responses are surfaced instead of being mistaken for an empty list.
+   *
+   * @returns {Promise<{expiries: string[]|null, diagnostic: object}>} Expiries and response diagnostics.
    */
   const fetchAvailableExpiryDates = async () => {
     try {
@@ -131,42 +195,54 @@ exports.handler = async (event, context) => {
         },
       });
 
-      if (response.ok) {
-        const contentType = response.headers.get("content-type");
-        if (contentType && (contentType.includes("application/json") || contentType.includes("text/json"))) {
-          const data = await response.json();
-          console.log("Available expiry dates response:", data);
-          
-          let expiryValues = [];
-
-          if (Array.isArray(data)) {
-            expiryValues = data.map((entry) =>
-              typeof entry === "string" ? entry : entry?.ExpiryDate
-            );
-          } else if (Array.isArray(data?.Table1)) {
-            expiryValues = data.Table1.map((entry) => entry?.ExpiryDate);
-          } else if (data && typeof data === "object") {
-            expiryValues = Object.values(data).flat().map((entry) =>
-              typeof entry === "string" ? entry : entry?.ExpiryDate
-            );
-          }
-
-          const normalizedExpiries = [
-            ...new Set(
-              expiryValues
-                .filter((date) => typeof date === "string")
-                .map((date) => date.trim())
-                .filter(Boolean)
-            ),
-          ];
-
-          return normalizedExpiries.length > 0 ? normalizedExpiries : null;
-        }
+      const diagnostic = await inspectBseResponse(response);
+      if (!diagnostic.ok || diagnostic.isHtml || !diagnostic.isJson) {
+        throw createBseUpstreamError("fetching the expiry catalogue", diagnostic);
       }
+
+      const data = diagnostic.data;
+      console.log("Available expiry dates response:", data);
+
+      let expiryValues = [];
+
+      if (Array.isArray(data)) {
+        expiryValues = data.map((entry) =>
+          typeof entry === "string" ? entry : entry?.ExpiryDate
+        );
+      } else if (Array.isArray(data?.Table1)) {
+        expiryValues = data.Table1.map((entry) => entry?.ExpiryDate);
+      } else if (data && typeof data === "object") {
+        expiryValues = Object.values(data).flat().map((entry) =>
+          typeof entry === "string" ? entry : entry?.ExpiryDate
+        );
+      }
+
+      const normalizedExpiries = [
+        ...new Set(
+          expiryValues
+            .filter((date) => typeof date === "string")
+            .map((date) => date.trim())
+            .filter(Boolean)
+        ),
+      ];
+
+      return {
+        expiries: normalizedExpiries.length > 0 ? normalizedExpiries : null,
+        diagnostic,
+      };
     } catch (error) {
+      if (error.code === "BSE_UPSTREAM_ACCESS_FAILED") {
+        throw error;
+      }
+
       console.warn("Failed to fetch expiry dates from BSE API:", error.message);
+      throw createBseUpstreamError("fetching the expiry catalogue", {
+        status: null,
+        contentType: "unknown",
+        bodySnippet: "",
+        networkError: error.message,
+      });
     }
-    return null;
   };
 
   // Helper function to generate potential expiry dates
@@ -193,7 +269,12 @@ exports.handler = async (event, context) => {
     return [...new Set(dates)];
   };
 
-  // Helper function to fetch BSE data with a specific expiry
+  /**
+   * Fetch one BSE option chain while retaining enough detail to classify a failure.
+   *
+   * @param {string} expiryDate Expiry date formatted as "DD MMM YYYY".
+   * @returns {Promise<{result: object|null, diagnostic: object|null}>} Chain result or failure diagnostic.
+   */
   const fetchBSEWithExpiry = async (expiryDate) => {
     const bseUrl = `${bseBaseUrl}/BseIndiaAPI/api/DerivOptionChain_IV/w?Expiry=${encodeURIComponent(
       expiryDate
@@ -212,47 +293,53 @@ exports.handler = async (event, context) => {
       Connection: "keep-alive",
     };
 
-    const response = await fetch(bseUrl, {
-      method: "GET",
-      headers: apiHeaders,
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      console.error(`BSE API Error for ${expiryDate}:`, text.substring(0, 200));
-      return null;
-    }
-
-    const contentType = response.headers.get("content-type");
-    if (
-      contentType &&
-      !contentType.includes("application/json") &&
-      !contentType.includes("text/json")
-    ) {
-      console.error(`BSE returned non-JSON for ${expiryDate}`);
-      return null;
-    }
-
-    const responseText = await response.text();
-    let data;
     try {
-      data = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error(`Failed to parse BSE response for ${expiryDate}:`, parseError);
-      return null;
-    }
+      const response = await fetch(bseUrl, {
+        method: "GET",
+        headers: apiHeaders,
+      });
+      const diagnostic = await inspectBseResponse(response);
 
-    // Check if we got valid data
-    if (data.Table && Array.isArray(data.Table) && data.Table.length > 0) {
-      return { data, expiry: expiryDate };
-    }
+      if (!diagnostic.ok || diagnostic.isHtml || !diagnostic.isJson) {
+        console.error(`BSE option-chain failure for ${expiryDate}:`, diagnostic);
+        return {
+          result: null,
+          diagnostic: { ...diagnostic, kind: "upstream_access", expiryDate },
+        };
+      }
 
-    return null;
+      const data = diagnostic.data;
+
+      // A parsed JSON response with an empty Table is a genuine no-contract result.
+      if (data?.Table && Array.isArray(data.Table) && data.Table.length > 0) {
+        return {
+          result: { data, expiry: expiryDate },
+          diagnostic: null,
+        };
+      }
+
+      return {
+        result: null,
+        diagnostic: { ...diagnostic, kind: "empty_data", expiryDate },
+      };
+    } catch (error) {
+      const diagnostic = {
+        kind: "upstream_access",
+        expiryDate,
+        status: null,
+        contentType: "unknown",
+        bodySnippet: "",
+        networkError: error.message,
+      };
+      console.error(`BSE option-chain network failure for ${expiryDate}:`, diagnostic);
+      return { result: null, diagnostic };
+    }
   };
 
   try {
     // Try to fetch available expiry dates from BSE API first
-    let availableExpiries = await fetchAvailableExpiryDates();
+    const expiryCatalogue = await fetchAvailableExpiryDates();
+    let availableExpiries = expiryCatalogue.expiries;
     
     // Determine which expiry dates to try
     let expiryDatesToTry = [];
@@ -284,14 +371,21 @@ exports.handler = async (event, context) => {
 
     let finalData = null;
     let finalExpiry = null;
+    const optionChainDiagnostics = [];
 
     // Try each expiry date until we get data
     for (const expiryDate of expiryDatesToTry) {
-      const result = await fetchBSEWithExpiry(expiryDate);
-      if (result) {
-        finalData = result.data;
-        finalExpiry = result.expiry;
+      const attempt = await fetchBSEWithExpiry(expiryDate);
+      if (attempt.result) {
+        finalData = attempt.result.data;
+        finalExpiry = attempt.result.expiry;
         console.log(`Successfully fetched data with expiry: ${finalExpiry}`);
+        break;
+      }
+
+      optionChainDiagnostics.push(attempt.diagnostic);
+      if (attempt.diagnostic?.kind === "upstream_access") {
+        // Repeating dates cannot fix a serverless-IP denial or non-JSON response.
         break;
       }
       // Small delay between retries
@@ -300,11 +394,20 @@ exports.handler = async (event, context) => {
 
     // If all expiry dates failed, provide detailed error
     if (!finalData || !finalData.Table || finalData.Table.length === 0) {
+      const upstreamFailure = optionChainDiagnostics.find(
+        (diagnostic) => diagnostic?.kind === "upstream_access"
+      );
+      if (upstreamFailure) {
+        throw createBseUpstreamError(
+          `fetching the option chain for ${upstreamFailure.expiryDate}`,
+          upstreamFailure
+        );
+      }
+
       throw new Error(
-        `BSE API returned empty data for ${symbol} (scrip_cd: ${scripCd}). ` +
+        `BSE API returned valid JSON but no option contracts for ${symbol} (scrip_cd: ${scripCd}). ` +
         `Tried ${expiryDatesToTry.length} expiry dates: ${expiryDatesToTry.join(", ")}. ` +
-        `Possible causes: 1) Wrong scrip_cd (currently ${scripCd}), 2) Market is closed, 3) No option contracts available for ${symbol}. ` +
-        `Please verify the correct scrip_cd for ${symbol} from BSE website.`
+        `No option-chain rows were published for those dates.`
       );
     }
 
@@ -438,7 +541,7 @@ exports.handler = async (event, context) => {
 
     // Return error response
     return {
-      statusCode: 500,
+      statusCode: error.statusCode || 500,
       headers: {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
@@ -446,6 +549,7 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         success: false,
         error: error.message || "Failed to fetch data from BSE API",
+        errorCode: error.code || "BSE_DATA_UNAVAILABLE",
         symbol: symbol.toUpperCase(),
         timestamp: new Date().toISOString(),
       }),

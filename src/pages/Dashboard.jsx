@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { fetchOptionChainData, fetchMockData } from '../utils/api-proxy'
 import { getLotSize, getStrikeInterval } from '../utils/lotSizes'
 import Header from '../components/Header'
@@ -10,6 +10,11 @@ import Notifications from '../components/Notifications'
 import Loader from '../components/Loader'
 import Footer from '../components/Footer'
 
+/**
+ * Renders the options dashboard and keeps symbol-specific requests and filters synchronized.
+ *
+ * @returns {JSX.Element} The options dashboard page.
+ */
 export default function Dashboard() {
   // State management
   const [data, setData] = useState(null)
@@ -29,6 +34,7 @@ export default function Dashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showUseTestDataOption, setShowUseTestDataOption] = useState(false)
   const [showInitialLoader, setShowInitialLoader] = useState(true)
+  const requestIdRef = useRef(0)
   
   // Theme state
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -54,8 +60,15 @@ export default function Dashboard() {
     }
   }, [isDarkMode])
 
-  // Fetch data - REAL DATA ONLY
+  /**
+   * Fetches real option-chain data and applies only the latest request response.
+   *
+   * @param {boolean} silent - Whether to refresh without showing the main loader.
+   * @returns {Promise<void>}
+   */
   const loadData = async (silent = false) => {
+    const requestId = ++requestIdRef.current
+
     if (!silent) {
       setLoading(true)
       setIsRefreshing(true)
@@ -65,6 +78,10 @@ export default function Dashboard() {
 
     try {
       const result = await fetchOptionChainData(symbol, expiryDate)
+
+      if (requestId !== requestIdRef.current) {
+        return
+      }
       
       // Log result for debugging
       console.log('Real data loaded:', {
@@ -90,20 +107,47 @@ export default function Dashboard() {
       
       setData(result)
       setShowUseTestDataOption(false) // Hide test data option on success
-      
-      // Set first expiry date as default if not set
-      if (result?.data?.records?.expiryDates?.length > 0 && !expiryDate) {
-        setExpiryDate(result.data.records.expiryDates[0])
+
+      const returnedExpiryDates = result?.data?.records?.expiryDates || []
+      const canonicalExpiry = result?.expiry
+      const activeExpiry = canonicalExpiry && returnedExpiryDates.includes(canonicalExpiry)
+        ? canonicalExpiry
+        : returnedExpiryDates[0]
+
+      if (activeExpiry && activeExpiry !== expiryDate) {
+        setExpiryDate(activeExpiry)
       }
     } catch (err) {
+      if (requestId !== requestIdRef.current) {
+        return
+      }
+
       console.error('Error loading real data:', err)
       setError(err.message || 'Failed to fetch real data from NSE')
       setShowUseTestDataOption(true) // Show option to use test data
       setData(null) // Clear any previous data
     } finally {
-      setLoading(false)
-      setIsRefreshing(false)
+      if (requestId === requestIdRef.current) {
+        setLoading(false)
+        setIsRefreshing(false)
+      }
     }
+  }
+
+  /**
+   * Invalidates pending requests and clears the prior symbol's expiry before switching symbols.
+   *
+   * @param {string} nextSymbol - Newly selected index symbol.
+   * @returns {void}
+   */
+  const handleSymbolChange = (nextSymbol) => {
+    if (nextSymbol === symbol) {
+      return
+    }
+
+    requestIdRef.current += 1
+    setExpiryDate('')
+    setSymbol(nextSymbol)
   }
 
   // Load test/mock data - explicitly called by user
@@ -442,7 +486,7 @@ export default function Dashboard() {
       {/* Header */}
       <Header
         symbol={symbol}
-        onSymbolChange={setSymbol}
+        onSymbolChange={handleSymbolChange}
         spotPrice={spotPrice}
         lastUpdated={lastUpdated}
         onRefresh={handleManualRefresh}
