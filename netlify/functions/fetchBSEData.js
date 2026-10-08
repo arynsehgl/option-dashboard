@@ -17,6 +17,16 @@ const BSE_SCRIPT_CODES = {
   BANKEX: 12,
 };
 
+/** Official SENSEX derivatives page used to prime BSE access after an Akamai denial. */
+const BSE_SENSEX_DERIVATIVES_PAGE_URL =
+  "https://www.bseindia.com/stock-share-price/future-options/derivatives/1";
+
+/** Consistent browser identity used for SENSEX page and API requests. */
+const BSE_BROWSER_USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) " +
+  "AppleWebKit/537.36 (KHTML, like Gecko) " +
+  "Chrome/154.0.0.0 Safari/537.36";
+
 // Using CommonJS export for better Netlify Functions compatibility
 exports.handler = async (event, context) => {
   // Log for debugging
@@ -89,6 +99,8 @@ exports.handler = async (event, context) => {
 
   // BSE API base URL
   const bseBaseUrl = "https://api.bseindia.com";
+  const isSensexRequest = symbol.toUpperCase() === "SENSEX";
+  let sensexWarmUpPromise = null;
 
   // Helper function to format date as "DD MMM YYYY"
   const formatDate = (date) => {
@@ -149,6 +161,123 @@ exports.handler = async (event, context) => {
   };
 
   /**
+   * Build the shared headers used by SENSEX API requests.
+   *
+   * @returns {object} Browser-like headers with the official derivatives page as Referer.
+   */
+  const buildSensexApiHeaders = () => ({
+    "User-Agent": BSE_BROWSER_USER_AGENT,
+    Accept: "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en-IN;q=0.9,en;q=0.8",
+    Referer: BSE_SENSEX_DERIVATIVES_PAGE_URL,
+    Origin: "https://www.bseindia.com",
+  });
+
+  /**
+   * Warm the official SENSEX derivatives page at most once during one function invocation.
+   *
+   * The response body is consumed so the request completes before the denied API call is retried.
+   * Warm-up diagnostics are retained only in function logs and never exposed to the browser.
+   *
+   * @returns {Promise<object>} HTTP or network diagnostics for the bounded warm-up attempt.
+   */
+  const warmSensexDerivativesPage = async () => {
+    if (!sensexWarmUpPromise) {
+      sensexWarmUpPromise = (async () => {
+        try {
+          const response = await fetch(BSE_SENSEX_DERIVATIVES_PAGE_URL, {
+            method: "GET",
+            headers: {
+              "User-Agent": BSE_BROWSER_USER_AGENT,
+              Accept:
+                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              "Accept-Language": "en-US,en-IN;q=0.9,en;q=0.8",
+            },
+          });
+          const contentType = response.headers.get("content-type") || "unknown";
+
+          await response.arrayBuffer();
+
+          const diagnostic = {
+            status: response.status,
+            ok: response.ok,
+            contentType,
+          };
+          console.log("BSE SENSEX warm-up response:", diagnostic);
+          return diagnostic;
+        } catch (error) {
+          const diagnostic = {
+            status: null,
+            ok: false,
+            contentType: "unknown",
+            networkError: error.message,
+          };
+          console.warn("BSE SENSEX warm-up failed:", diagnostic);
+          return diagnostic;
+        }
+      })();
+    }
+
+    return sensexWarmUpPromise;
+  };
+
+  /**
+   * Fetch and inspect one BSE API response, with one SENSEX-only warm-up retry on denial.
+   *
+   * BANKEX keeps its existing request headers and direct-call behavior. SENSEX retries only an
+   * HTTP 403 or HTML response, while JSON errors and all other statuses remain single attempts.
+   *
+   * @param {string} url Exact BSE API URL to request.
+   * @param {object} existingHeaders Existing headers retained for non-SENSEX requests.
+   * @param {string} operation Short operation name used in server logs.
+   * @returns {Promise<object>} Parsed response diagnostics from the direct call or one retry.
+   */
+  const fetchBseApiWithSensexWarmUp = async (
+    url,
+    existingHeaders,
+    operation
+  ) => {
+    const requestHeaders = isSensexRequest
+      ? buildSensexApiHeaders()
+      : existingHeaders;
+    const requestApi = async () => {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: requestHeaders,
+      });
+      return inspectBseResponse(response);
+    };
+
+    const initialDiagnostic = await requestApi();
+    const shouldRetry =
+      isSensexRequest &&
+      (initialDiagnostic.status === 403 || initialDiagnostic.isHtml);
+
+    if (!shouldRetry) {
+      return initialDiagnostic;
+    }
+
+    console.warn(
+      `BSE denied ${operation}; warming the official SENSEX page before one retry.`,
+      {
+        status: initialDiagnostic.status,
+        contentType: initialDiagnostic.contentType,
+      }
+    );
+    const warmUpDiagnostic = await warmSensexDerivativesPage();
+    const retryDiagnostic = await requestApi();
+
+    return {
+      ...retryDiagnostic,
+      retry: {
+        attempted: true,
+        initialStatus: initialDiagnostic.status,
+        warmUpStatus: warmUpDiagnostic.status,
+      },
+    };
+  };
+
+  /**
    * Build an actionable error while keeping the upstream response body in server logs only.
    *
    * @param {string} operation Human-readable BSE operation that failed.
@@ -186,16 +315,15 @@ exports.handler = async (event, context) => {
       const expiryUrl = `${bseBaseUrl}/BseIndiaAPI/api/ddlExpiry_New/w?scrip_cd=${scripCd}`;
       console.log(`Fetching available expiry dates from: ${expiryUrl}`);
       
-      const response = await fetch(expiryUrl, {
-        method: "GET",
-        headers: {
+      const diagnostic = await fetchBseApiWithSensexWarmUp(
+        expiryUrl,
+        {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
           Accept: "application/json, text/json, text/plain, */*",
           Referer: "https://www.bseindia.com/",
         },
-      });
-
-      const diagnostic = await inspectBseResponse(response);
+        "expiry catalogue request"
+      );
       if (!diagnostic.ok || diagnostic.isHtml || !diagnostic.isJson) {
         throw createBseUpstreamError("fetching the expiry catalogue", diagnostic);
       }
@@ -294,11 +422,11 @@ exports.handler = async (event, context) => {
     };
 
     try {
-      const response = await fetch(bseUrl, {
-        method: "GET",
-        headers: apiHeaders,
-      });
-      const diagnostic = await inspectBseResponse(response);
+      const diagnostic = await fetchBseApiWithSensexWarmUp(
+        bseUrl,
+        apiHeaders,
+        `option-chain request for ${expiryDate}`
+      );
 
       if (!diagnostic.ok || diagnostic.isHtml || !diagnostic.isJson) {
         console.error(`BSE option-chain failure for ${expiryDate}:`, diagnostic);
