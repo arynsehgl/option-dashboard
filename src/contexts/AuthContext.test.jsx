@@ -4,6 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
+import { normalizeSuperAdminEmails, resolveSuperAdminEmails } from '../config/firebase'
 import {
   isConfiguredSuperAdmin,
   parseAccessInstant,
@@ -58,10 +59,40 @@ describe('AuthContext entitlement helpers', () => {
     expect(() => validateSignupProfile('Existing User', '1'.repeat(33))).toThrow('32 characters or fewer')
   })
 
-  it('derives browser admin state only from the configured Firebase email match', () => {
-    expect(isConfiguredSuperAdmin({ email: ' OWNER@example.com ', emailVerified: true }, 'owner@example.com')).toBe(true)
-    expect(isConfiguredSuperAdmin({ email: 'owner@example.com', emailVerified: false }, 'owner@example.com')).toBe(true)
-    expect(isConfiguredSuperAdmin({ email: 'other@example.com', emailVerified: true }, 'owner@example.com')).toBe(false)
-    expect(isConfiguredSuperAdmin({ email: 'owner@example.com', emailVerified: true }, '')).toBe(false)
+  it('normalizes and deduplicates comma-separated administrator settings', () => {
+    expect(normalizeSuperAdminEmails(
+      ' FIRST-OWNER@example.com, ,SECOND-OWNER@example.com,,first-owner@example.com ',
+      [' legacy@example.com ', null, 42],
+      '',
+    )).toEqual([
+      'first-owner@example.com',
+      'second-owner@example.com',
+      'legacy@example.com',
+    ])
+  })
+
+  it('fails closed for malformed entries and does not revive legacy access', () => {
+    expect(normalizeSuperAdminEmails('valid@example.com,invalid,@example.com,owner@localhost,,')).toEqual([
+      'valid@example.com',
+    ])
+    expect(resolveSuperAdminEmails('invalid-entry', 'legacy@example.com')).toEqual([])
+  })
+
+  it('uses the plural allowlist in preference to the legacy single-address setting', () => {
+    expect(resolveSuperAdminEmails('first-owner@example.com,second-owner@example.com', 'legacy@example.com')).toEqual([
+      'first-owner@example.com',
+      'second-owner@example.com',
+    ])
+    expect(resolveSuperAdminEmails('   ', 'legacy@example.com')).toEqual(['legacy@example.com'])
+  })
+
+  it('derives browser admin state only from the configured Firebase email allowlist', () => {
+    const configuredEmails = ['first-owner@example.com', 'second-owner@example.com']
+
+    expect(isConfiguredSuperAdmin({ email: ' FIRST-OWNER@example.com ', emailVerified: true }, configuredEmails)).toBe(true)
+    expect(isConfiguredSuperAdmin({ email: 'second-owner@example.com', emailVerified: false }, configuredEmails)).toBe(true)
+    expect(isConfiguredSuperAdmin({ email: 'other@example.com', emailVerified: true, isSuperAdmin: true }, configuredEmails)).toBe(false)
+    expect(isConfiguredSuperAdmin({ email: 'first-owner@example.com', emailVerified: true }, ', ,')).toBe(false)
+    expect(isConfiguredSuperAdmin({ email: null }, configuredEmails)).toBe(false)
   })
 })

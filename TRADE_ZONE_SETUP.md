@@ -39,7 +39,7 @@ Copy the existing V1 production Firebase web values unchanged into the matching 
 
 Firebase Authentication must authorize the production Netlify domain. Authorize a deploy-preview domain only when that preview needs an interactive Firebase login, and remove obsolete preview domains after validation. Enable Firebase Authentication Email Enumeration Protection in the V1 production project and verify login, signup, and password-recovery responses do not disclose whether an account exists.
 
-Administrator authority comes only from an authenticated Firebase email matching the explicitly configured owner email; browser authorization never trusts the Firestore `isSuperAdmin` profile field. Set `VITE_SUPERADMIN_EMAIL` and `FIREBASE_SUPERADMIN_EMAIL` to the same normalized email address. V2 temporarily permits an existing V1 email/password owner to match even when Firebase still reports that address as unverified, so the owner is not sent to Pricing during cutover. Verify that address in Firebase as a post-migration follow-up. Omit both environment values when no configured-email administrator bypass is required.
+Administrator authority comes only from an authenticated Firebase email matching the explicit environment allowlist; browser authorization never trusts the Firestore `isSuperAdmin` profile field. Set `VITE_SUPERADMIN_EMAILS` and `FIREBASE_SUPERADMIN_EMAILS` to the same comma-separated list of exact email addresses. Values are trimmed, compared case-insensitively, and deduplicated; Gmail dot or `+` aliases are not rewritten. A non-empty plural setting is authoritative. The legacy singular `VITE_SUPERADMIN_EMAIL` and `FIREBASE_SUPERADMIN_EMAIL` settings are fallback-only when their corresponding plural value is absent or blank, so a stale singular value cannot silently preserve revoked access. Before deployment, confirm every listed Firebase Auth identity is enabled, email-verified, and has a readable `users/{uid}` Firestore profile. The code temporarily permits an existing V1 email/password administrator to match even when Firebase still reports that address as unverified, but that compatibility path is not the approved production posture. Omit both plural and singular settings when no configured-email administrator bypass is required.
 
 ### Trade Worker
 
@@ -52,7 +52,7 @@ Required production settings are documented in `services/trade-worker/.env.examp
 - A base64-encoded 32-byte `APP_ENCRYPTION_KEY`
 - `FIREBASE_PROJECT_ID` for the same V1 Firebase project
 - Both `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY`, unless Application Default Credentials are deliberately enabled with `FIREBASE_ALLOW_APPLICATION_DEFAULT=true`
-- Optional server-only `FIREBASE_SUPERADMIN_EMAIL`, exactly matching `VITE_SUPERADMIN_EMAIL`
+- Optional server-only `FIREBASE_SUPERADMIN_EMAILS`, containing the same exact allowlist as `VITE_SUPERADMIN_EMAILS`; the singular variables are legacy fallback only
 - Optional `GITHUB_TOKEN` and `COPILOT_MODEL` for AI research
 - `LIVE_ORDERING_ENABLED=false`
 
@@ -150,10 +150,10 @@ Keep the static frontend and Netlify Functions on Netlify. Run `services/trade-w
    docker build -t stride-trade-worker services/trade-worker
    ```
 
-5. Store worker values in the host's encrypted secret facility. Never bake `.env` into the image.
+5. Store worker values in the host's encrypted secret facility, including the complete `FIREBASE_SUPERADMIN_EMAILS` allowlist. Keep the existing singular administrator value during the rollback window; new code ignores it while the plural setting is populated, but an old worker/frontend rollback still requires it. Never bake `.env` into the image.
 6. Put the worker behind TLS, proxy HTTP and WebSocket upgrades to port 3002, configure the exact `TRUST_PROXY_HOPS` value, and disable or redact callback query strings in every proxy/access-log format.
 7. Deploy one worker replica and verify it completes Firebase Auth, Firestore, and required Supabase-schema readiness checks before it listens. Multiple replicas can duplicate scheduled jobs because distributed schedule locking is not implemented; V2 supports exactly one scheduler-bearing replica.
-8. Set Netlify's `VITE_TRADE_WORKER_URL` to the same public worker origin, retain the V1 Firebase values, verify the browser/server administrator emails match when configured, and deploy the V2 frontend/functions while maintenance traffic remains blocked.
+8. Set Netlify's `VITE_TRADE_WORKER_URL` to the same public worker origin, retain the V1 Firebase values, set `VITE_SUPERADMIN_EMAILS` to the same allowlist already deployed as `FIREBASE_SUPERADMIN_EMAILS`, and deploy the V2 frontend/functions while maintenance traffic remains blocked. Vite embeds this value at build time, so changing it always requires a new frontend deployment.
 9. Immediately deploy `firestore.rules` to the verified V1 Firebase project, then run the release smoke checks before reopening traffic. Do not leave the V2 frontend on legacy rules or the tagged V1 frontend on strict V2 create rules.
 10. Confirm the Kite callback URL and all allowed frontend origins match the deployed hosts exactly, then reopen traffic only after every identity and safety check passes.
 
@@ -174,7 +174,7 @@ Then complete this production smoke checklist:
 
 - Run the Firestore rules suite against the local Firebase emulator; verify bounded V2 trial creation, legacy V1 profile reads/display edits, cross-user denial, field-size limits, and entitlement/admin mutation denial.
 - Verify `/health` over HTTPS. Confirm the worker refuses to bind if `LIVE_ORDERING_ENABLED` is anything except `false`, or if Firebase Auth, Firestore, Supabase connectivity, or the required Supabase schema readiness fails.
-- Sign in with an existing V1 Firebase email account and Google account; verify the same Firestore profile, trial, and subscription are used. When an admin is configured, confirm both environment values match and only the verified Firebase Auth email receives admin access.
+- Sign in with an existing V1 Firebase email account and Google account; verify the same Firestore profile, trial, and subscription are used. When administrators are configured, confirm the browser and worker plural allowlists match, every listed enabled and verified Firebase identity has its own readable profile and receives access, an allowlisted identity without a profile is rejected, an unlisted expired account is sent to Pricing, and a stale legacy singular value cannot add another administrator.
 - Confirm Email Enumeration Protection is enabled and signup/password-recovery behavior does not reveal whether an account exists.
 - Disable a test Firebase account and confirm both authenticated APIs and scheduled work reject it. Confirm expired users are also denied and scheduled work rechecks Firebase entitlement.
 - Confirm no Supabase key is present in the browser bundle, network requests, or Netlify public variables.
@@ -192,7 +192,7 @@ Then complete this production smoke checklist:
 
 1. Enter maintenance mode and stop new traffic to the V2 frontend and worker if identity, database, or broker validation fails. Keep `LIVE_ORDERING_ENABLED=false`.
 2. Restore the captured, reviewed V1 Firestore rules before redeploying the tagged V1 frontend/functions. This order is mandatory so V1 signup never meets the strict V2 timestamp create contract. Never switch to a different Firebase project as a shortcut.
-3. Redeploy the recorded previous frontend/functions revision and previous worker image; do not delete user data as part of an application rollback.
+3. Redeploy the recorded previous frontend/functions revision and previous worker image; keep the legacy singular administrator values available until the rollback window closes because old revisions do not understand the plural allowlists. Do not delete user data as part of an application rollback.
 4. Database migrations are forward security/data changes. Do not manually reverse them in production. Restore the pre-release Supabase backup only after assessing data written since deployment and approving the resulting data loss window.
 5. Revoke or rotate worker secrets if exposure is suspected, then validate Firebase token rejection, Supabase access, Kite sessions, and origin controls before reopening traffic.
 

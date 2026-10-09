@@ -72,7 +72,7 @@ export async function loadEntitledProfiles(
       ])
       if (!sourceProfile) continue
       const authoritativeProfile = buildAuthoritativeFirebaseProfile(identity, sourceProfile, {
-        superadminEmail: config.FIREBASE_SUPERADMIN_EMAIL,
+        superadminEmails: config.firebaseSuperadminEmails,
       })
       const profileId = await resolveSupabaseProfile(supabase, authoritativeProfile)
       if (authoritativeProfile.access.entitled) entitledProfiles.push({ id: profileId, firebaseUid: profile.firebase_uid })

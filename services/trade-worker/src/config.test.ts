@@ -60,6 +60,54 @@ describe('worker configuration', () => {
     expect(config.firebaseAllowApplicationDefault).toBe(false)
   })
 
+  it('normalizes and deduplicates the plural administrator allowlist', () => {
+    const config = parseWorkerConfig({
+      ...requiredEnvironment,
+      FIREBASE_SUPERADMIN_EMAILS: ' Owner@Example.com,second-owner@example.com, owner@example.com, ',
+    })
+    expect(config.firebaseSuperadminEmails).toEqual([
+      'owner@example.com',
+      'second-owner@example.com',
+    ])
+  })
+
+  it('uses the plural allowlist instead of retaining a stale legacy administrator', () => {
+    const config = parseWorkerConfig({
+      ...requiredEnvironment,
+      FIREBASE_SUPERADMIN_EMAILS: 'current-owner@example.com',
+      FIREBASE_SUPERADMIN_EMAIL: 'stale-owner@example.com',
+    })
+    expect(config.firebaseSuperadminEmails).toEqual(['current-owner@example.com'])
+  })
+
+  it('keeps the legacy single administrator setting backward compatible', () => {
+    const config = parseWorkerConfig({
+      ...requiredEnvironment,
+      FIREBASE_SUPERADMIN_EMAIL: ' OWNER@Example.com ',
+    })
+    expect(config.firebaseSuperadminEmails).toEqual(['owner@example.com'])
+  })
+
+  it('falls back to the legacy setting when the plural allowlist is blank', () => {
+    const config = parseWorkerConfig({
+      ...requiredEnvironment,
+      FIREBASE_SUPERADMIN_EMAILS: '   ',
+      FIREBASE_SUPERADMIN_EMAIL: 'owner@example.com',
+    })
+    expect(config.firebaseSuperadminEmails).toEqual(['owner@example.com'])
+  })
+
+  it('rejects invalid administrator emails in either configuration setting', () => {
+    expect(() => parseWorkerConfig({
+      ...requiredEnvironment,
+      FIREBASE_SUPERADMIN_EMAILS: 'owner@example.com,not-an-email',
+    })).toThrow('FIREBASE_SUPERADMIN_EMAILS')
+    expect(() => parseWorkerConfig({
+      ...requiredEnvironment,
+      FIREBASE_SUPERADMIN_EMAIL: 'not-an-email',
+    })).toThrow('FIREBASE_SUPERADMIN_EMAIL')
+  })
+
   it('rejects encryption material that does not decode to 32 bytes', () => {
     expect(() => parseWorkerConfig({ ...requiredEnvironment, APP_ENCRYPTION_KEY: Buffer.alloc(31).toString('base64') })).toThrow('32-byte key')
   })

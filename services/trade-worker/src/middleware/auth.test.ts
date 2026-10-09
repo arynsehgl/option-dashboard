@@ -86,23 +86,33 @@ describe('Firebase worker authentication', () => {
     expect(buildAuthoritativeFirebaseProfile(token, {
       ...expiredProfile,
       isSuperAdmin: true,
-    }, { superadminEmail: 'owner@example.com' }).access).toEqual(expect.objectContaining({
+    }, { superadminEmails: ['owner@example.com', 'second-owner@example.com'] }).access).toEqual(expect.objectContaining({
       isSuperAdmin: false,
       entitled: false,
     }))
     expect(buildAuthoritativeFirebaseProfile(token, {
       ...expiredProfile,
       isSuperAdmin: 'true',
-    }, { superadminEmail: 'owner@example.com' }).access).toEqual(expect.objectContaining({
+    }, { superadminEmails: ['owner@example.com', 'second-owner@example.com'] }).access).toEqual(expect.objectContaining({
+      isSuperAdmin: false,
+      entitled: false,
+    }))
+    expect(buildAuthoritativeFirebaseProfile({ ...token, email: undefined }, {
+      ...expiredProfile,
+      email: 'owner@example.com',
+      isSuperAdmin: true,
+    }, { superadminEmails: ['owner@example.com'] }).access).toEqual(expect.objectContaining({
       isSuperAdmin: false,
       entitled: false,
     }))
   })
 
-  it('grants server-side administrator access from a normalized configured token email', () => {
+  it('grants each normalized configured token email using exact matches only', () => {
     const source = { isSuperAdmin: false, isTrialActive: false, subscriptionStatus: 'expired' }
-    expect(buildAuthoritativeFirebaseProfile({ uid: 'one', email: 'owner@example.com', emailVerified: false }, source, { superadminEmail: 'owner@example.com' }).access.isSuperAdmin).toBe(true)
-    expect(buildAuthoritativeFirebaseProfile({ uid: 'one', email: 'OWNER@example.com', emailVerified: true }, source, { superadminEmail: 'owner@example.com' }).access.isSuperAdmin).toBe(true)
+    const options = { superadminEmails: ['owner@example.com', ' second-owner@example.com '] }
+    expect(buildAuthoritativeFirebaseProfile({ uid: 'one', email: 'owner@example.com', emailVerified: false }, source, options).access.isSuperAdmin).toBe(true)
+    expect(buildAuthoritativeFirebaseProfile({ uid: 'two', email: 'SECOND-OWNER@example.com', emailVerified: true }, source, options).access.isSuperAdmin).toBe(true)
+    expect(buildAuthoritativeFirebaseProfile({ uid: 'three', email: 'owner@example.com.attacker.test', emailVerified: true }, source, options).access.isSuperAdmin).toBe(false)
   })
 
   it('propagates a configured administrator through worker identity resolution', async () => {
@@ -131,7 +141,7 @@ describe('Firebase worker authentication', () => {
     const response = createResponse()
     const next = vi.fn() as NextFunction
 
-    await requireUser(firebaseIdentity, supabase, { superadminEmail: 'OWNER@example.com' })(request, response, next)
+    await requireUser(firebaseIdentity, supabase, { superadminEmails: ['first-owner@example.com', ' OWNER@example.com '] })(request, response, next)
 
     expect(supabase.rpc).toHaveBeenCalledWith('resolve_firebase_profile', expect.objectContaining({
       p_is_super_admin: true,
@@ -152,7 +162,7 @@ describe('Firebase worker authentication', () => {
     const response = createResponse()
     const next = vi.fn() as NextFunction
 
-    await requireUser(firebaseIdentity, supabase, { superadminEmail: 'admin@example.com' })(request, response, next)
+    await requireUser(firebaseIdentity, supabase, { superadminEmails: ['admin@example.com'] })(request, response, next)
 
     expect(firebaseIdentity.verifyIdToken).toHaveBeenCalledWith('firebase-id-token', true)
     expect(supabase.rpc).toHaveBeenCalledWith('resolve_firebase_profile', expect.objectContaining({

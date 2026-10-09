@@ -12,7 +12,7 @@ import type { SupabaseAdmin } from '../lib/supabase.js'
 const SUBSCRIPTION_STATUSES = new Set(['trial', 'active', 'expired', 'cancelled'])
 
 export interface FirebaseAuthOptions {
-  superadminEmail?: string
+  superadminEmails?: readonly string[]
 }
 
 export interface AuthoritativeFirebaseProfile {
@@ -72,6 +72,18 @@ function profileString(value: unknown, maximumLength: number): string {
 }
 
 /**
+ * Checks one normalized Firebase token email against the server-only exact
+ * administrator allowlist without consulting mutable Firestore profile data.
+ */
+function isConfiguredSuperadmin(tokenEmail: string | undefined, configuredEmails: readonly string[]) {
+  const normalizedTokenEmail = tokenEmail?.trim().toLowerCase() || ''
+  return Boolean(
+    normalizedTokenEmail
+    && configuredEmails.some((configuredEmail) => configuredEmail.trim().toLowerCase() === normalizedTokenEmail),
+  )
+}
+
+/**
  * Computes the server-authoritative access snapshot. Administrator authority
  * comes only from the normalized Firebase token email matching server-only
  * configuration; mutable or legacy Firestore profile fields are never trusted.
@@ -83,11 +95,7 @@ export function buildAuthoritativeFirebaseProfile(
   nowMs = Date.now(),
 ): AuthoritativeFirebaseProfile {
   const email = token.email || profileString(profile.email, 320)
-  const normalizedConfiguredAdmin = options.superadminEmail?.trim().toLowerCase() || ''
-  const isSuperAdmin = Boolean(
-    normalizedConfiguredAdmin
-    && token.email?.trim().toLowerCase() === normalizedConfiguredAdmin,
-  )
+  const isSuperAdmin = isConfiguredSuperadmin(token.email, options.superadminEmails || [])
   const trialEndAt = toIsoInstant(profile.trialEndDate)
   const subscriptionEndAt = toIsoInstant(profile.subscriptionEndDate)
   const subscriptionStatusValue = profileString(profile.subscriptionStatus, 32)

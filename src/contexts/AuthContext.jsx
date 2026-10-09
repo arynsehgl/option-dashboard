@@ -17,7 +17,14 @@ import {
   updateProfile,
 } from 'firebase/auth'
 import { doc, getDoc, serverTimestamp, setDoc, Timestamp } from 'firebase/firestore'
-import { auth, db, googleProvider, isFirebaseConfigured, SUPERADMIN_EMAIL } from '../config/firebase'
+import {
+  auth,
+  db,
+  googleProvider,
+  isFirebaseConfigured,
+  normalizeSuperAdminEmails,
+  SUPERADMIN_EMAILS,
+} from '../config/firebase'
 
 const AuthContext = createContext(null)
 const isLocalPreviewEnabled = import.meta.env.DEV && !isFirebaseConfigured
@@ -109,15 +116,20 @@ function boundProviderProfileValue(value, maximumLength) {
 
 /**
  * Grants browser administrator state only when the authenticated Firebase
- * email matches the explicitly configured owner email. Email verification is
+ * email matches the explicitly configured allowlist. Email verification is
  * recommended, but is not a hard gate for an existing V1 email/password owner.
+ * Firestore profile fields are deliberately excluded from this decision.
+ *
+ * @param {object|null|undefined} user Authenticated Firebase identity.
+ * @param {string|string[]} configuredEmails Configured administrator emails.
+ * @returns {boolean} Whether the identity belongs to the configured allowlist.
  */
-export function isConfiguredSuperAdmin(user, configuredEmail = SUPERADMIN_EMAIL) {
-  const normalizedConfiguredEmail = String(configuredEmail || '').trim().toLowerCase()
-  return Boolean(
-    normalizedConfiguredEmail
-    && user?.email?.trim().toLowerCase() === normalizedConfiguredEmail,
-  )
+export function isConfiguredSuperAdmin(user, configuredEmails = SUPERADMIN_EMAILS) {
+  const normalizedUserEmail = typeof user?.email === 'string'
+    ? user.email.trim().toLowerCase()
+    : ''
+  if (!normalizedUserEmail) return false
+  return normalizeSuperAdminEmails(configuredEmails).includes(normalizedUserEmail)
 }
 
 /**
