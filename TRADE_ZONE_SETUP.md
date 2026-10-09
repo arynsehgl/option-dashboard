@@ -39,7 +39,7 @@ Copy the existing V1 production Firebase web values unchanged into the matching 
 
 Firebase Authentication must authorize the production Netlify domain. Authorize a deploy-preview domain only when that preview needs an interactive Firebase login, and remove obsolete preview domains after validation. Enable Firebase Authentication Email Enumeration Protection in the V1 production project and verify login, signup, and password-recovery responses do not disclose whether an account exists.
 
-If an administrator identity is required, set `VITE_SUPERADMIN_EMAIL` and `FIREBASE_SUPERADMIN_EMAIL` to the same normalized email address. The matching Firebase Authentication account must have a verified email. Browser and worker authorization deliberately ignore mutable Firestore `email` and `isSuperAdmin` fields; omit both environment values when no administrator bypass is required.
+Administrator authority comes only from an authenticated Firebase email matching the explicitly configured owner email; browser authorization never trusts the Firestore `isSuperAdmin` profile field. Set `VITE_SUPERADMIN_EMAIL` and `FIREBASE_SUPERADMIN_EMAIL` to the same normalized email address. V2 temporarily permits an existing V1 email/password owner to match even when Firebase still reports that address as unverified, so the owner is not sent to Pricing during cutover. Verify that address in Firebase as a post-migration follow-up. Omit both environment values when no configured-email administrator bypass is required.
 
 ### Trade Worker
 

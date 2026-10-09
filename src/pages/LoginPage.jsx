@@ -31,11 +31,10 @@ export default function LoginPage() {
     try {
       if (isSignUp) {
         await signup(email, password, name, phone)
-        navigate('/pricing')
       } else {
         await login(email, password)
-        navigate('/zones')
       }
+      navigate('/zones')
     } catch (authError) {
       setError(authError.message || 'Authentication failed. Please try again.')
     } finally {
@@ -51,7 +50,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await signInWithGoogle(isSignUp)
-      navigate(isSignUp ? '/pricing' : '/zones')
+      navigate('/zones')
     } catch (authError) {
       setError(authError.message || 'Google authentication failed. Please try again.')
       setLoading(false)
