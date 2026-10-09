@@ -1,6 +1,6 @@
-# Stride V2 — Dashboard and Trade Zone
+# Strikeview V2 — Dashboard and Trade Zone
 
-Stride V2 keeps the existing NSE/BSE options Dashboard and adds a guarded Kite-powered Trade Zone for read-only portfolio visibility, charts, draft strategies, and paper AI research.
+Strikeview V2 keeps the existing NSE/BSE options Dashboard and adds a guarded Kite-powered Trade Zone for read-only portfolio visibility, charts, draft strategies, and paper AI research.
 
 The production V1 Firebase project remains the only browser identity, user-profile, trial, subscription, and entitlement source of truth. Existing users keep the same accounts and access state in V2. The persistent Trade Worker verifies Firebase ID tokens with Firebase Admin before it maps each Firebase UID to an internal Supabase profile UUID. Supabase is server-only storage for Trade Zone state; it is not a browser authentication provider.
 

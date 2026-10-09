@@ -190,7 +190,7 @@ export function requireUser(
     try {
       const sourceProfile = await firebaseIdentity.getUserProfile(verifiedToken.uid)
       if (!sourceProfile) {
-        response.status(403).json({ error: 'A Firebase Stride profile is required.' })
+        response.status(403).json({ error: 'A Firebase Strikeview profile is required.' })
         return
       }
       const authoritativeProfile = buildAuthoritativeFirebaseProfile(verifiedToken, sourceProfile, options)
@@ -219,7 +219,7 @@ export function requireActiveAccess() {
       return
     }
     if (!request.user.access.entitled) {
-      response.status(403).json({ error: 'The Stride trial or subscription has expired.' })
+      response.status(403).json({ error: 'The Strikeview trial or subscription has expired.' })
       return
     }
     next()

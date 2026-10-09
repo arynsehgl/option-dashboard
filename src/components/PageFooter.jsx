@@ -1,4 +1,4 @@
-/** Renders the shared public-page footer for the Stride experience. */
+/** Renders the shared public-page footer for the Strikeview experience. */
 import React from 'react'
 import BrandMark from './BrandMark'
 
@@ -11,7 +11,7 @@ export default function PageFooter() {
       <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-5 border-t border-[var(--glass-border)] pt-6 text-sm text-muted sm:flex-row">
         <BrandMark />
         <p>Analytics and execution tools for informed decisions. Trading involves risk.</p>
-        <p>© {new Date().getFullYear()} Stride</p>
+        <p>© {new Date().getFullYear()} Strikeview</p>
       </div>
     </footer>
   )

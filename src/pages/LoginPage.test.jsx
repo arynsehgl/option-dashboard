@@ -17,7 +17,7 @@ vi.mock('../contexts/AuthContext', () => ({
 }))
 
 vi.mock('../components/BrandMark', () => ({
-  default: () => <span>Stride</span>,
+  default: () => <span>Strikeview</span>,
 }))
 
 vi.mock('../components/ThemeToggle', () => ({

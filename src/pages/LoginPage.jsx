@@ -99,7 +99,7 @@ export default function LoginPage() {
           <div>
             <span className="eyebrow">{isSignUp ? 'Start your trial' : 'Secure sign in'}</span>
             <h2 id="auth-title" className="mt-2 text-3xl font-black tracking-[-0.035em] text-ink">{isSignUp ? 'Create your account' : 'Welcome back'}</h2>
-            <p className="mt-2 text-sm leading-6 text-muted">{isSignUp ? 'Three days to explore both zones.' : 'Continue to your Stride zone lobby.'}</p>
+            <p className="mt-2 text-sm leading-6 text-muted">{isSignUp ? 'Three days to explore both zones.' : 'Continue to your Strikeview zone lobby.'}</p>
           </div>
 
           <div className="surface-muted mt-6 grid grid-cols-2 rounded-xl p-1" role="tablist" aria-label="Authentication mode">

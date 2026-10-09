@@ -1,4 +1,4 @@
-/** Presents the public Stride product overview and entry points. */
+/** Presents the public Strikeview product overview and entry points. */
 import React from 'react'
 import { ArrowRight, BarChart3, Bot, CandlestickChart, Check, Layers3, ShieldCheck, Sparkles, Zap } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -25,7 +25,7 @@ const features = [
 ]
 
 /**
- * Renders the redesigned public landing page for both Stride product zones.
+ * Renders the redesigned public landing page for both Strikeview product zones.
  */
 export default function HomePage() {
   const { currentUser } = useAuth()
@@ -44,7 +44,7 @@ export default function HomePage() {
               See the market.<br /><span className="brand-gradient">Move with clarity.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">
-              Stride brings options analytics and a guarded trading workspace together without mixing their jobs. Explore structure in Dashboard, then move to Trade Zone when you are ready to act.
+              Strikeview brings options analytics and a guarded trading workspace together without mixing their jobs. Explore structure in Dashboard, then move to Trade Zone when you are ready to act.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link to={currentUser ? '/zones' : '/login'} className="btn-primary px-6 py-3.5">

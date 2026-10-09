@@ -108,7 +108,7 @@ export function validateSignupProfile(name, phone) {
 
 /**
  * Bounds identity-provider profile text that the user did not type into the
- * Stride form so Google signup always satisfies the same Firestore rules.
+ * Strikeview form so Google signup always satisfies the same Firestore rules.
  */
 function boundProviderProfileValue(value, maximumLength) {
   return String(value || '').trim().slice(0, maximumLength)
@@ -322,7 +322,7 @@ export function AuthProvider({ children }) {
     if (!profile) {
       invalidateAuthenticatedUser()
       await signOut(auth)
-      throw new Error('This Firebase account does not have a Stride profile. Please contact support.')
+      throw new Error('This Firebase account does not have a Strikeview profile. Please contact support.')
     }
     return credential
   }
