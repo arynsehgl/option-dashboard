@@ -1,0 +1,77 @@
+rules_version = '2';
+
+// Firebase remains the source of truth for Stride identity and entitlements.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function ownsProfile(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function createsSafeTrial(userId) {
+      return ownsProfile(userId)
+        && request.resource.data.keys().hasAll([
+          'uid',
+          'email',
+          'name',
+          'phone',
+          'trialStartDate',
+          'trialEndDate',
+          'isTrialActive',
+          'subscriptionStatus',
+          'subscriptionPlan',
+          'subscriptionEndDate',
+          'createdAt',
+          'isSuperAdmin'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'uid',
+          'email',
+          'name',
+          'phone',
+          'trialStartDate',
+          'trialEndDate',
+          'isTrialActive',
+          'subscriptionStatus',
+          'subscriptionPlan',
+          'subscriptionEndDate',
+          'createdAt',
+          'isSuperAdmin'
+        ])
+        && request.resource.data.uid == userId
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() <= 32
+        && request.resource.data.trialStartDate == request.time
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.trialEndDate is timestamp
+        && request.resource.data.trialEndDate >= request.time + duration.value(71, 'h')
+        && request.resource.data.trialEndDate <= request.time + duration.value(73, 'h')
+        && request.resource.data.isTrialActive == true
+        && request.resource.data.subscriptionStatus == 'trial'
+        && request.resource.data.subscriptionPlan == null
+        && request.resource.data.subscriptionEndDate == null
+        && request.resource.data.isSuperAdmin == false;
+    }
+
+    function updatesDisplayProfileOnly() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() <= 32;
+    }
+
+    match /users/{userId} {
+      allow read: if ownsProfile(userId);
+      allow create: if createsSafeTrial(userId);
+      allow update: if ownsProfile(userId) && updatesDisplayProfileOnly();
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,10 +1,15 @@
+/** Initializes the browser Firebase services shared with the V1 production app. */
 import { initializeApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
-// Firebase configuration
-// TODO: Replace with your actual Firebase config
-// Get this from Firebase Console > Project Settings > General > Your apps
+/**
+ * Firebase compatibility client for deployments that have legacy Firebase
+ * credentials. Missing credentials intentionally leave the client disabled so
+ * local preview and unconfigured production builds fail safely.
+ * @module config/firebase
+ */
+
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -14,15 +19,19 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 }
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig)
+export const isFirebaseConfigured = Boolean(
+  firebaseConfig.apiKey
+  && firebaseConfig.authDomain
+  && firebaseConfig.projectId
+  && firebaseConfig.appId
+)
 
-// Initialize Firebase services
-export const auth = getAuth(app)
-export const db = getFirestore(app)
-export const googleProvider = new GoogleAuthProvider()
+const app = isFirebaseConfigured ? initializeApp(firebaseConfig) : null
 
-// SuperAdmin email - TODO: Set this to your email
-export const SUPERADMIN_EMAIL = import.meta.env.VITE_SUPERADMIN_EMAIL || "your-email@example.com"
+export const auth = app ? getAuth(app) : null
+export const db = app ? getFirestore(app) : null
+export const googleProvider = app ? new GoogleAuthProvider() : null
+
+export const SUPERADMIN_EMAIL = (import.meta.env.VITE_SUPERADMIN_EMAIL || '').trim().toLowerCase()
 
 export default app

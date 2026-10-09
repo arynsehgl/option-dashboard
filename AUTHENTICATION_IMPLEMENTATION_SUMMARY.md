@@ -1,5 +1,11 @@
 # Authentication & Subscription System - Implementation Summary
 
+> [!WARNING]
+> **Archived V1 implementation record — not current V2 operating guidance.**
+> V2 keeps the same Firebase users and Firestore entitlement data but hardens
+> administrator authority and client writes. Use
+> [`TRADE_ZONE_SETUP.md`](TRADE_ZONE_SETUP.md) for the supported production model.
+
 ## ✅ What Has Been Implemented
 
 ### 1. **Authentication System** ✅

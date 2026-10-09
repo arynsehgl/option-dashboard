@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
@@ -9,9 +8,8 @@ dist/
 .netlify/
 
 # Environment variables
-.env
-.env.local
-.env.*.local
+.env*
+!.env.example
 
 # IDE
 .vscode/
@@ -27,4 +25,3 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
-

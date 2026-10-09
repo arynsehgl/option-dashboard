@@ -1,0 +1,212 @@
+name: V2 Release Gates
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - v2_stride_dashboard_revamp
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v2-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Frontend tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Use Node.js 22.13.0
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Use Java 21 for Firebase emulators
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Run frontend tests
+        run: npm test
+      - name: Run Firestore security rules tests
+        run: npm run test:firestore-rules
+      - name: Build frontend
+        run: npm run build
+      - name: Validate BSE serverless function syntax
+        run: node --check netlify/functions/fetchBSEData.js
+
+  trade-worker:
+    name: Trade worker tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: services/trade-worker
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Use Node.js 22.13.0
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+          cache-dependency-path: services/trade-worker/package-lock.json
+      - name: Install worker dependencies
+        run: npm ci
+      - name: Run worker tests
+        run: npm test
+      - name: Build worker
+        run: npm run build
+      - name: Build production worker image
+        run: docker build --tag stride-trade-worker:ci .
+
+  database-migrations:
+    name: PostgreSQL migration and privilege checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGDATABASE: postgres
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Bootstrap Supabase-compatible database roles
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create role service_role nologin bypassrls;
+          create schema auth;
+          create table auth.users (id uuid primary key);
+          grant usage on schema public to anon, authenticated, service_role;
+          alter default privileges in schema public grant all on tables to service_role;
+          alter default privileges in schema public grant all on sequences to service_role;
+          alter default privileges in schema public grant execute on functions to service_role;
+          SQL
+      - name: Apply migrations in release order
+        run: |
+          for migration in supabase/migrations/*.sql; do
+            echo "Applying ${migration}"
+            psql --single-transaction -v ON_ERROR_STOP=1 --file "${migration}"
+          done
+      - name: Assert database security boundaries
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          declare
+            offending_objects text;
+            function_signature text;
+          begin
+            select string_agg(format('%I.%I', namespace.nspname, relation.relname), ', ')
+              into offending_objects
+              from pg_class as relation
+              join pg_namespace as namespace on namespace.oid = relation.relnamespace
+             where namespace.nspname = 'public'
+               and relation.relkind in ('r', 'p')
+               and not relation.relrowsecurity;
+            if offending_objects is not null then
+              raise exception 'Public tables missing RLS: %', offending_objects;
+            end if;
+
+            select string_agg(format('%I.%I', namespace.nspname, relation.relname), ', ')
+              into offending_objects
+              from pg_class as relation
+              join pg_namespace as namespace on namespace.oid = relation.relnamespace
+             where namespace.nspname = 'public'
+               and relation.relkind in ('r', 'p')
+               and (
+                 has_table_privilege('anon', relation.oid, 'SELECT')
+                 or has_table_privilege('anon', relation.oid, 'INSERT')
+                 or has_table_privilege('anon', relation.oid, 'UPDATE')
+                 or has_table_privilege('anon', relation.oid, 'DELETE')
+                 or has_table_privilege('authenticated', relation.oid, 'SELECT')
+                 or has_table_privilege('authenticated', relation.oid, 'INSERT')
+                 or has_table_privilege('authenticated', relation.oid, 'UPDATE')
+                 or has_table_privilege('authenticated', relation.oid, 'DELETE')
+               );
+            if offending_objects is not null then
+              raise exception 'Browser roles retain table privileges: %', offending_objects;
+            end if;
+
+            select string_agg(format('%I.%I', namespace.nspname, routine.proname), ', ')
+              into offending_objects
+              from pg_proc as routine
+              join pg_namespace as namespace on namespace.oid = routine.pronamespace
+             where namespace.nspname = 'public'
+               and (
+                 has_function_privilege('anon', routine.oid, 'EXECUTE')
+                 or has_function_privilege('authenticated', routine.oid, 'EXECUTE')
+               );
+            if offending_objects is not null then
+              raise exception 'Browser roles retain function execution: %', offending_objects;
+            end if;
+
+            select string_agg(format('%I.%I', namespace.nspname, relation.relname), ', ')
+              into offending_objects
+              from pg_class as relation
+              join pg_namespace as namespace on namespace.oid = relation.relnamespace
+             where namespace.nspname = 'public'
+               and relation.relkind in ('r', 'p')
+               and not has_table_privilege('service_role', relation.oid, 'SELECT');
+            if offending_objects is not null then
+              raise exception 'Service role cannot read required tables: %', offending_objects;
+            end if;
+
+            foreach function_signature in array array[
+              'public.resolve_firebase_profile(text,text,text,text,timestamptz,timestamptz,boolean,text,text,timestamptz,boolean)',
+              'public.record_paper_fill(uuid,text,text,text,integer,numeric,numeric,timestamptz,text,text,text,uuid,text,jsonb)',
+              'public.record_ai_risk_rejection(uuid,uuid,text,text,text[],numeric,numeric,jsonb)',
+              'public.finalize_ai_run(uuid,uuid,text,text,text,integer,numeric,text,uuid[])',
+              'public.consume_broker_oauth_state(text)',
+              'public.verify_stride_v2_runtime_guards()'
+            ] loop
+              if to_regprocedure(function_signature) is null
+                 or not has_function_privilege('service_role', function_signature, 'EXECUTE') then
+                raise exception 'Service role cannot execute required RPC: %', function_signature;
+              end if;
+            end loop;
+
+            if to_regclass('public.ai_runs_one_active_per_user_idx') is null then
+              raise exception 'Active AI-run uniqueness index is missing';
+            end if;
+            if to_regprocedure('public.record_paper_fill(uuid,text,text,text,integer,numeric,numeric,timestamptz,text,text,text)') is not null then
+              raise exception 'Legacy unfenced paper-fill RPC is still present';
+            end if;
+            if not public.verify_stride_v2_runtime_guards() then
+              raise exception 'V2 runtime readiness marker reported missing guards';
+            end if;
+            if not exists (
+              select 1
+                from pg_trigger
+               where tgname = 'paper_fills_market_session_guard'
+                 and not tgisinternal
+                 and tgenabled <> 'D'
+            ) then
+              raise exception 'Paper-fill market-session trigger is missing or disabled';
+            end if;
+          end
+          $$;
+          SQL

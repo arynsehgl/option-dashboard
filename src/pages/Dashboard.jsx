@@ -1,3 +1,4 @@
+/** Coordinates real options-chain loading, analysis, filtering, and display. */
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { fetchOptionChainData, fetchMockData } from '../utils/api-proxy'
 import { getLotSize, getStrikeInterval } from '../utils/lotSizes'
@@ -9,6 +10,8 @@ import Charts from '../components/Charts'
 import Notifications from '../components/Notifications'
 import Loader from '../components/Loader'
 import Footer from '../components/Footer'
+import ZoneRopeSwitch from '../components/ZoneRopeSwitch'
+import { useTheme } from '../contexts/ThemeContext'
 
 /**
  * Renders the options dashboard and keeps symbol-specific requests and filters synchronized.
@@ -16,6 +19,7 @@ import Footer from '../components/Footer'
  * @returns {JSX.Element} The options dashboard page.
  */
 export default function Dashboard() {
+  const { isDarkMode, toggleTheme } = useTheme()
   // State management
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -36,30 +40,6 @@ export default function Dashboard() {
   const [showInitialLoader, setShowInitialLoader] = useState(true)
   const requestIdRef = useRef(0)
   
-  // Theme state
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const saved = localStorage.getItem('theme')
-    return saved ? saved === 'dark' : true // Default to dark
-  })
-
-  // Toggle theme
-  const toggleTheme = () => {
-    setIsDarkMode(prev => {
-      const newTheme = !prev
-      localStorage.setItem('theme', newTheme ? 'dark' : 'light')
-      return newTheme
-    })
-  }
-
-  // Apply theme to document
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-  }, [isDarkMode])
-
   /**
    * Fetches real option-chain data and applies only the latest request response.
    *
@@ -473,11 +453,8 @@ export default function Dashboard() {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${
-      isDarkMode 
-        ? 'bg-slate-900 text-slate-100' 
-        : 'bg-gray-50 text-gray-900'
-    }`} data-theme={isDarkMode ? 'dark' : 'light'}>
+    <div className="app-background min-h-screen flex flex-col text-ink" data-theme={isDarkMode ? 'dark' : 'light'}>
+      <ZoneRopeSwitch currentZone="dashboard" />
       {/* Initial Loader */}
       {showInitialLoader && (
         <Loader onComplete={() => setShowInitialLoader(false)} isDarkMode={isDarkMode} />
@@ -506,7 +483,7 @@ export default function Dashboard() {
       )}
 
       {/* Main Content */}
-      <div className="max-w-[98vw] mx-auto px-1 sm:px-2 lg:px-3 py-4">
+      <div className="relative z-10 w-full max-w-[98vw] mx-auto px-1 sm:px-2 lg:px-3 py-5">
         {/* Loading State */}
         {loading && (
           <div className="flex items-center justify-center min-h-[400px]">

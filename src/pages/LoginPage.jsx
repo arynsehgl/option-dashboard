@@ -1,291 +1,138 @@
+/** Handles Firebase email and Google authentication for new and returning users. */
 import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { ArrowRight, BarChart3, Bot, Check, Eye, EyeOff, LockKeyhole, Mail, Phone, User } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import BrandMark from '../components/BrandMark'
+import ThemeToggle from '../components/ThemeToggle'
 import { useAuth } from '../contexts/AuthContext'
 
+/**
+ * Renders unified sign-in and sign-up flows for the workspace.
+ */
 export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
   const { signup, login, signInWithGoogle } = useAuth()
   const navigate = useNavigate()
 
-  async function handleSubmit(e) {
-    e.preventDefault()
+  /**
+   * Authenticates with email credentials and opens the post-login zone lobby.
+   */
+  async function handleSubmit(event) {
+    event.preventDefault()
     setError('')
     setLoading(true)
-
     try {
       if (isSignUp) {
         await signup(email, password, name, phone)
         navigate('/pricing')
       } else {
         await login(email, password)
-        navigate('/dashboard')
+        navigate('/zones')
       }
-    } catch (err) {
-      setError(err.message || 'Failed to authenticate. Please try again.')
+    } catch (authError) {
+      setError(authError.message || 'Authentication failed. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  async function handleGoogleAuth(isSignUpFlow = false) {
+  /**
+   * Starts the configured Google authentication flow.
+   */
+  async function handleGoogleAuth() {
     setError('')
     setLoading(true)
-
     try {
-      await signInWithGoogle(isSignUpFlow)
-      if (isSignUpFlow) {
-        navigate('/pricing')
-      } else {
-        navigate('/dashboard')
-      }
-    } catch (err) {
-      setError(err.message || 'Failed to authenticate with Google. Please try again.')
-    } finally {
+      await signInWithGoogle(isSignUp)
+      navigate(isSignUp ? '/pricing' : '/zones')
+    } catch (authError) {
+      setError(authError.message || 'Google authentication failed. Please try again.')
       setLoading(false)
     }
+  }
+
+  /**
+   * Switches form modes without carrying a stale error into the new flow.
+   */
+  function changeMode(nextIsSignUp) {
+    setIsSignUp(nextIsSignUp)
+    setError('')
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo and Title */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <svg
-              width="60"
-              height="60"
-              viewBox="0 0 40 40"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="text-blue-500"
-            >
-              <circle cx="20" cy="20" r="18" fill="rgba(59, 130, 246, 0.1)" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="2"/>
-              <path
-                d="M20 8 L26 16 L22 16 L22 24 L18 24 L18 16 L14 16 Z"
-                fill="rgba(16, 185, 129, 0.9)"
-                stroke="rgba(16, 185, 129, 1)"
-                strokeWidth="1.5"
-              />
-              <path
-                d="M20 32 L26 24 L22 24 L22 16 L18 16 L18 24 L14 24 Z"
-                fill="rgba(239, 68, 68, 0.9)"
-                stroke="rgba(239, 68, 68, 1)"
-                strokeWidth="1.5"
-              />
-              <line x1="12" y1="20" x2="28" y2="20" stroke="rgba(59, 130, 246, 0.6)" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent mb-2">
-            StrikeView
-          </h1>
-          <p className="text-slate-400">
-            {isSignUp ? 'Create your account' : 'Welcome back'}
-          </p>
+    <div className="app-background min-h-screen text-ink">
+      <header className="relative z-20 px-4 pt-4 sm:px-6">
+        <div className="glass-toolbar mx-auto flex max-w-7xl items-center justify-between rounded-[1.35rem] px-4 py-3 sm:px-5">
+          <Link to="/"><BrandMark /></Link>
+          <ThemeToggle />
         </div>
+      </header>
 
-        {/* Card */}
-        <div className="bg-slate-800 rounded-xl shadow-2xl p-8 border border-slate-700">
-          {/* Toggle Sign Up / Sign In */}
-          <div className="flex gap-2 mb-6 bg-slate-700/50 p-1 rounded-lg">
-            <button
-              onClick={() => {
-                setIsSignUp(false)
-                setError('')
-              }}
-              className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
-                !isSignUp
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => {
-                setIsSignUp(true)
-                setError('')
-              }}
-              className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
-                isSignUp
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              Sign Up
-            </button>
+      <main className="relative z-10 mx-auto grid min-h-[calc(100vh-92px)] max-w-7xl items-center gap-12 px-4 pb-12 sm:px-6 lg:grid-cols-[1fr_30rem]">
+        <section className="hidden max-w-2xl lg:block">
+          <span className="eyebrow">Welcome to your workspace</span>
+          <h1 className="mt-4 text-6xl font-black leading-[1.02] tracking-[-0.055em] text-ink">
+            Clarity before<br /><span className="brand-gradient">every decision.</span>
+          </h1>
+          <p className="mt-6 max-w-xl text-lg leading-8 text-muted">Move naturally from options intelligence to a guarded execution environment—without losing context or control.</p>
+          <div className="mt-10 grid max-w-xl gap-4 sm:grid-cols-2">
+            {[
+              [BarChart3, 'Dashboard', 'Focused options-chain analytics'],
+              [Bot, 'Trade Zone', 'Live portfolio and paper-first AI'],
+            ].map(([Icon, title, copy]) => (
+              <div key={title} className="glass-card rounded-2xl p-5">
+                <Icon size={20} className="text-indigo-500" />
+                <p className="mt-3 font-black">{title}</p>
+                <p className="mt-1 text-sm text-muted">{copy}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="glass-panel-strong mx-auto w-full max-w-md rounded-[2rem] p-6 sm:p-8" aria-labelledby="auth-title">
+          <div>
+            <span className="eyebrow">{isSignUp ? 'Start your trial' : 'Secure sign in'}</span>
+            <h2 id="auth-title" className="mt-2 text-3xl font-black tracking-[-0.035em] text-ink">{isSignUp ? 'Create your account' : 'Welcome back'}</h2>
+            <p className="mt-2 text-sm leading-6 text-muted">{isSignUp ? 'Three days to explore both zones.' : 'Continue to your Stride zone lobby.'}</p>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-
-          {/* Google Auth Buttons */}
-          <div className="space-y-3 mb-6">
-            <button
-              onClick={() => handleGoogleAuth(isSignUp)}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white hover:bg-gray-100 text-gray-700 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path
-                  fill="currentColor"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                />
-                <path
-                  fill="currentColor"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                />
-              </svg>
-              {isSignUp ? 'Sign up with Google' : 'Sign in with Google'}
-            </button>
+          <div className="surface-muted mt-6 grid grid-cols-2 rounded-xl p-1" role="tablist" aria-label="Authentication mode">
+            <button type="button" role="tab" aria-selected={!isSignUp} onClick={() => changeMode(false)} className={`rounded-lg px-3 py-2.5 text-sm font-bold transition ${!isSignUp ? 'bg-indigo-600 text-white shadow-lg' : 'text-muted hover:text-ink'}`}>Sign in</button>
+            <button type="button" role="tab" aria-selected={isSignUp} onClick={() => changeMode(true)} className={`rounded-lg px-3 py-2.5 text-sm font-bold transition ${isSignUp ? 'bg-indigo-600 text-white shadow-lg' : 'text-muted hover:text-ink'}`}>Sign up</button>
           </div>
 
-          {/* Divider */}
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-600"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-slate-800 text-slate-400">Or continue with email</span>
-            </div>
-          </div>
+          {error && <div role="alert" className="mt-5 rounded-xl border border-rose-400/25 bg-rose-500/10 p-3 text-sm font-medium text-rose-500">{error}</div>}
 
-          {/* Form */}
+          <button type="button" onClick={handleGoogleAuth} disabled={loading} className="btn-secondary mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50">
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.31v2.77h3.56c2.09-1.92 3.28-4.74 3.28-8.09Z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.77c-.99.66-2.24 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z"/><path fill="#FBBC05" d="M5.84 14.1A6.6 6.6 0 0 1 5.49 12c0-.73.13-1.43.35-2.1V7.08H2.18A11 11 0 0 0 1 12c0 1.78.43 3.45 1.18 4.94l3.66-2.84Z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15A10.6 10.6 0 0 0 12 1a11 11 0 0 0-9.82 6.08L5.84 9.9C6.71 7.31 9.14 5.38 12 5.38Z"/></svg>
+            Continue with Google
+          </button>
+
+          <div className="my-5 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.13em] text-muted"><span className="h-px flex-1 bg-[var(--glass-border)]" />or email<span className="h-px flex-1 bg-[var(--glass-border)]" /></div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
               <>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required={isSignUp}
-                    className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="John Doe"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    required={isSignUp}
-                    className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="+91 1234567890"
-                  />
-                </div>
+                <label className="block text-sm font-bold text-ink">Full name<div className="relative mt-2"><User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={17} /><input className="form-control pl-10" value={name} onChange={(event) => setName(event.target.value)} required maxLength={120} placeholder="Your name" autoComplete="name" /></div></label>
+                <label className="block text-sm font-bold text-ink">Phone number<div className="relative mt-2"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={17} /><input className="form-control pl-10" value={phone} onChange={(event) => setPhone(event.target.value)} required maxLength={32} placeholder="+91 98765 43210" autoComplete="tel" /></div></label>
               </>
             )}
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="you@example.com"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="••••••••"
-                minLength={6}
-              />
-            </div>
-
-            {!isSignUp && (
-              <div className="text-right">
-                <Link
-                  to="/forgot-password"
-                  className="text-sm text-blue-400 hover:text-blue-300"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-            >
-              {loading ? 'Processing...' : isSignUp ? 'Create Account' : 'Sign In'}
-            </button>
+            <label className="block text-sm font-bold text-ink">Email<div className="relative mt-2"><Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={17} /><input type="email" className="form-control pl-10" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="you@example.com" autoComplete="email" /></div></label>
+            <label className="block text-sm font-bold text-ink">Password<div className="relative mt-2"><LockKeyhole className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={17} /><input type={showPassword ? 'text' : 'password'} className="form-control px-10" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} placeholder="At least 6 characters" autoComplete={isSignUp ? 'new-password' : 'current-password'} /><button type="button" onClick={() => setShowPassword((shown) => !shown)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink" aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
+            {!isSignUp && <div className="text-right"><Link to="/forgot-password" className="text-sm font-bold text-indigo-500 hover:text-indigo-400">Forgot password?</Link></div>}
+            <button type="submit" disabled={loading} className="btn-primary w-full py-3.5 disabled:cursor-not-allowed disabled:opacity-50">{loading ? 'Please wait…' : isSignUp ? 'Create account' : 'Enter workspace'}{!loading && <ArrowRight size={17} />}</button>
           </form>
 
-          {/* Footer */}
-          <div className="mt-6 text-center text-sm text-slate-400">
-            {isSignUp ? (
-              <p>
-                Already have an account?{' '}
-                <button
-                  onClick={() => setIsSignUp(false)}
-                  className="text-blue-400 hover:text-blue-300 font-medium"
-                >
-                  Sign in
-                </button>
-              </p>
-            ) : (
-              <p>
-                Don't have an account?{' '}
-                <button
-                  onClick={() => setIsSignUp(true)}
-                  className="text-blue-400 hover:text-blue-300 font-medium"
-                >
-                  Sign up
-                </button>
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Back to Home */}
-        <div className="mt-6 text-center">
-          <Link
-            to="/"
-            className="text-sm text-slate-400 hover:text-slate-300"
-          >
-            ← Back to Home
-          </Link>
-        </div>
-      </div>
+          {isSignUp && <p className="mt-5 flex items-start gap-2 text-xs leading-5 text-muted"><Check size={15} className="mt-0.5 shrink-0 text-emerald-500" />By continuing, you acknowledge that market data and trading tools do not guarantee returns.</p>}
+        </section>
+      </main>
     </div>
   )
 }
