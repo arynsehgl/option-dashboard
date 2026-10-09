@@ -72,8 +72,9 @@ function profileString(value: unknown, maximumLength: number): string {
 }
 
 /**
- * Computes the server-authoritative access snapshot. Super-admin authority is
- * granted only for a verified Firebase email matching server-only configuration.
+ * Computes the server-authoritative access snapshot. Administrator authority
+ * comes only from the normalized Firebase token email matching server-only
+ * configuration; mutable or legacy Firestore profile fields are never trusted.
  */
 export function buildAuthoritativeFirebaseProfile(
   token: VerifiedFirebaseToken,
@@ -85,7 +86,6 @@ export function buildAuthoritativeFirebaseProfile(
   const normalizedConfiguredAdmin = options.superadminEmail?.trim().toLowerCase() || ''
   const isSuperAdmin = Boolean(
     normalizedConfiguredAdmin
-    && token.emailVerified
     && token.email?.trim().toLowerCase() === normalizedConfiguredAdmin,
   )
   const trialEndAt = toIsoInstant(profile.trialEndDate)

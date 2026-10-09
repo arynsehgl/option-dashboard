@@ -108,14 +108,14 @@ function boundProviderProfileValue(value, maximumLength) {
 }
 
 /**
- * Grants browser-only administrator presentation state from the authenticated
- * Firebase identity, never from mutable or legacy Firestore document fields.
+ * Grants browser administrator state only when the authenticated Firebase
+ * email matches the explicitly configured owner email. Email verification is
+ * recommended, but is not a hard gate for an existing V1 email/password owner.
  */
-export function isVerifiedConfiguredSuperAdmin(user, configuredEmail = SUPERADMIN_EMAIL) {
+export function isConfiguredSuperAdmin(user, configuredEmail = SUPERADMIN_EMAIL) {
   const normalizedConfiguredEmail = String(configuredEmail || '').trim().toLowerCase()
   return Boolean(
     normalizedConfiguredEmail
-    && user?.emailVerified === true
     && user?.email?.trim().toLowerCase() === normalizedConfiguredEmail,
   )
 }
@@ -250,7 +250,7 @@ export function AuthProvider({ children }) {
       return null
     }
     const data = userSnapshot.data()
-    const superAdmin = isVerifiedConfiguredSuperAdmin(authenticatedUser)
+    const superAdmin = isConfiguredSuperAdmin(authenticatedUser)
     setUserData(data)
     setIsSuperAdmin(superAdmin)
     return data
