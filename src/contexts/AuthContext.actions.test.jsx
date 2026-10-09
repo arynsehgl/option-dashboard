@@ -27,7 +27,16 @@ vi.mock('../config/firebase', () => ({
   db: { name: 'firestore' },
   googleProvider: { name: 'google' },
   isFirebaseConfigured: true,
-  SUPERADMIN_EMAIL: 'owner@example.com',
+  /** Mirrors production allowlist normalization while Firebase config is mocked. */
+  normalizeSuperAdminEmails: (...sources) => [...new Set(
+    sources
+      .flatMap((source) => (Array.isArray(source) ? source : [source]))
+      .filter((source) => typeof source === 'string')
+      .flatMap((source) => source.split(','))
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
+  )],
+  SUPERADMIN_EMAILS: ['first-owner@example.com', 'second-owner@example.com'],
 }))
 
 vi.mock('firebase/auth', () => ({
@@ -126,15 +135,35 @@ describe('AuthContext account actions', () => {
     expect(authMocks.signOut).toHaveBeenCalled()
   })
 
-  it('does not silently create a missing profile during ordinary email login', async () => {
-    const user = { uid: 'orphan-email-user', email: 'user@example.com', emailVerified: true }
+  it('requires a Firestore profile even when the email is on the administrator allowlist', async () => {
+    const user = { uid: 'orphan-email-user', email: 'first-owner@example.com', emailVerified: true }
     authMocks.signInWithEmailAndPassword.mockResolvedValue({ user })
     authMocks.getDoc.mockResolvedValue({ exists: () => false })
     await renderAuthProvider()
 
-    await expect(authContext.login('user@example.com', 'password')).rejects.toThrow('does not have a Stride profile')
+    await expect(authContext.login(user.email, 'password')).rejects.toThrow('does not have a Stride profile')
     expect(authMocks.setDoc).not.toHaveBeenCalled()
     expect(authMocks.signOut).toHaveBeenCalled()
+    expect(authContext.isSuperAdmin).toBe(false)
+  })
+
+  it.each([
+    ['the first configured owner', ' FIRST-OWNER@example.com ', false, true],
+    ['the second configured owner', 'second-owner@example.com', false, true],
+    ['an unlisted user', 'other@example.com', true, false],
+  ])('derives %s administrator state from email, never the Firestore flag', async (_label, email, profileFlag, expectedAdmin) => {
+    const user = { uid: `user-${email.trim()}`, email, emailVerified: true }
+    authMocks.signInWithEmailAndPassword.mockResolvedValue({ user })
+    authMocks.getDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ uid: user.uid, email: email.trim(), isSuperAdmin: profileFlag }),
+    })
+    await renderAuthProvider()
+
+    await act(async () => authContext.login(email.trim(), 'password'))
+
+    expect(authContext.userData?.isSuperAdmin).toBe(profileFlag)
+    expect(authContext.isSuperAdmin).toBe(expectedAdmin)
   })
 
   it('uses official Google new-user metadata and bounds provider profile values', async () => {

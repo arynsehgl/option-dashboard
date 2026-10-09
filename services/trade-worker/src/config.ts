@@ -6,6 +6,8 @@
 import 'dotenv/config'
 import { z } from 'zod'
 
+const configuredEmailSchema = z.string().email()
+
 const environmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3002),
@@ -22,11 +24,34 @@ const environmentSchema = z.object({
   FIREBASE_CLIENT_EMAIL: z.string().email().optional(),
   FIREBASE_PRIVATE_KEY: z.string().min(64).optional(),
   FIREBASE_ALLOW_APPLICATION_DEFAULT: z.enum(['true', 'false']).default('false'),
-  FIREBASE_SUPERADMIN_EMAIL: z.string().email().optional(),
+  FIREBASE_SUPERADMIN_EMAILS: z.string().optional(),
+  FIREBASE_SUPERADMIN_EMAIL: z.string().optional(),
   GITHUB_TOKEN: z.string().min(1).optional(),
   COPILOT_MODEL: z.string().default('gpt-5'),
   LIVE_ORDERING_ENABLED: z.literal('false').default('false'),
 })
+
+/**
+ * Normalizes the comma-separated administrator allowlist, falling back to the
+ * legacy single email only when the plural setting is absent or blank.
+ */
+function normalizeFirebaseSuperadminEmails(configuredEmails?: string, legacyEmail?: string) {
+  const candidates = configuredEmails?.trim()
+    ? configuredEmails.split(',').map((value) => ({ fieldName: 'FIREBASE_SUPERADMIN_EMAILS', value }))
+    : legacyEmail === undefined
+      ? []
+      : [{ fieldName: 'FIREBASE_SUPERADMIN_EMAIL', value: legacyEmail }]
+  const normalizedEmails = new Set<string>()
+  for (const candidate of candidates) {
+    const normalizedEmail = candidate.value.trim().toLowerCase()
+    if (!normalizedEmail) continue
+    if (!configuredEmailSchema.safeParse(normalizedEmail).success) {
+      throw new Error(`Invalid worker configuration: ${candidate.fieldName} contains an invalid email address`)
+    }
+    normalizedEmails.add(normalizedEmail)
+  }
+  return Array.from(normalizedEmails)
+}
 
 /**
  * Converts a configured URL into an exact browser origin and rejects paths,
@@ -60,6 +85,10 @@ export function parseWorkerConfig(environment: NodeJS.ProcessEnv) {
     ...(parsed.data.FRONTEND_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean)
       .map((origin) => parseExactOrigin(origin, 'FRONTEND_ORIGINS')),
   ]))
+  const firebaseSuperadminEmails = normalizeFirebaseSuperadminEmails(
+    parsed.data.FIREBASE_SUPERADMIN_EMAILS,
+    parsed.data.FIREBASE_SUPERADMIN_EMAIL,
+  )
   if (parsed.data.NODE_ENV === 'production') {
     const secureUrls = [parsed.data.PUBLIC_WORKER_URL, parsed.data.SUPABASE_URL, ...frontendOrigins]
     if (secureUrls.some((value) => new URL(value).protocol !== 'https:')) {
@@ -72,6 +101,7 @@ export function parseWorkerConfig(environment: NodeJS.ProcessEnv) {
     trustProxyHops: parsed.data.TRUST_PROXY_HOPS,
     maxStreamClientsPerUser: parsed.data.MAX_STREAM_CLIENTS_PER_USER,
     firebaseAllowApplicationDefault: parsed.data.NODE_ENV !== 'production' || parsed.data.FIREBASE_ALLOW_APPLICATION_DEFAULT === 'true',
+    firebaseSuperadminEmails,
     liveOrderingEnabled: false,
   }
 }

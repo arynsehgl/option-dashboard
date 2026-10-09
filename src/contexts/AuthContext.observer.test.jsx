@@ -21,7 +21,9 @@ vi.mock('../config/firebase', () => ({
   db: { name: 'firestore' },
   googleProvider: { name: 'google' },
   isFirebaseConfigured: true,
-  SUPERADMIN_EMAIL: 'admin@example.com',
+  /** Returns the normalized mock allowlist used by the observer lifecycle test. */
+  normalizeSuperAdminEmails: (source) => (Array.isArray(source) ? source : []),
+  SUPERADMIN_EMAILS: ['admin@example.com'],
 }))
 
 vi.mock('firebase/auth', () => ({

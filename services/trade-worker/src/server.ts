@@ -204,7 +204,7 @@ app.get('/api/v1/kite/callback', rateLimit(kiteCallbackRateLimitOptions), asyncH
 app.use(
   '/api/v1',
   rateLimit({ windowMs: 60000, limit: 300, standardHeaders: 'draft-8', legacyHeaders: false }),
-  requireUser(firebaseIdentity, supabase, { superadminEmail: config.FIREBASE_SUPERADMIN_EMAIL }),
+  requireUser(firebaseIdentity, supabase, { superadminEmails: config.firebaseSuperadminEmails }),
   requireActiveAccess(),
 )
 
