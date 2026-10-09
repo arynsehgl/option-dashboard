@@ -1,3 +1,4 @@
+/** Renders options-chain charts from the dashboard's calculated metrics. */
 import React from 'react'
 import { Bar, Line } from 'react-chartjs-2'
 
@@ -16,8 +17,8 @@ export default function Charts({ data, isDarkMode = true }) {
   if (strikes.length === 0) {
     return (
       <div className="mt-6">
-        <h2 className="text-2xl font-bold mb-4 text-white">CHARTS & ANALYTICS</h2>
-        <div className="bg-slate-800 rounded-lg p-6 border border-slate-700 text-center">
+        <h2 className="text-xl font-black mb-4 text-ink">Charts & analytics</h2>
+        <div className="glass-panel-strong rounded-3xl p-6 text-center">
           <p className="text-slate-400">No chart data available</p>
         </div>
       </div>
@@ -268,10 +269,10 @@ export default function Charts({ data, isDarkMode = true }) {
 
   return (
     <div className="mt-6">
-      <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">CHARTS & ANALYTICS</h2>
+      <h2 className="text-xl font-black mb-4 text-ink">Charts & analytics</h2>
       
       {/* Single Line Chart: Change in OI (CE + PE) */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700 shadow-sm dark:shadow-none mb-4">
+      <div className="glass-panel-strong rounded-3xl p-4 mb-4">
         <div className="h-80">
           <Line data={changeOILineChartData} options={changeOILineChartOptions} />
         </div>
@@ -279,21 +280,21 @@ export default function Charts({ data, isDarkMode = true }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Chart 1: Open Interest vs Strike */}
-        <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700 shadow-sm dark:shadow-none">
+        <div className="glass-panel-strong rounded-3xl p-4">
           <div className="h-80">
             <Bar data={oiChartData} options={oiChartOptions} />
           </div>
         </div>
 
         {/* Chart 2: Change in Open Interest (Bar) */}
-        <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700 shadow-sm dark:shadow-none">
+        <div className="glass-panel-strong rounded-3xl p-4">
           <div className="h-80">
             <Bar data={changeOIChartData} options={changeOIChartOptions} />
           </div>
         </div>
 
         {/* Chart 3: Volume Analysis */}
-        <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700 shadow-sm dark:shadow-none lg:col-span-2">
+        <div className="glass-panel-strong rounded-3xl p-4 lg:col-span-2">
           <div className="h-80">
             <Bar data={volumeChartData} options={volumeChartOptions} />
           </div>
@@ -302,4 +303,3 @@ export default function Charts({ data, isDarkMode = true }) {
     </div>
   )
 }
-

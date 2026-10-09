@@ -1,3 +1,4 @@
+/** Summarizes key option-chain metrics for the selected market snapshot. */
 import React from 'react'
 import { Pie } from 'react-chartjs-2'
 import { formatLargeNumber } from '../utils/formatNumber'
@@ -36,37 +37,37 @@ export default function KeyMetrics({ data, metrics, compact = false }) {
   // Compact horizontal layout
   if (compact) {
     return (
-      <div className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+      <div className="relative z-20 border-b border-[var(--glass-border)] bg-[var(--glass)] backdrop-blur-xl">
         <div className="max-w-[98vw] mx-auto px-1 sm:px-2 lg:px-3 py-3">
-          <h2 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white text-center sm:text-left">KEY METRICS</h2>
+          <h2 className="text-xs font-black uppercase tracking-[0.16em] mb-3 text-muted text-center sm:text-left">Key metrics</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             {/* PCR */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-3 border border-gray-200 dark:border-slate-600">
+            <div className="surface-muted rounded-2xl p-3">
               <div className="text-xs text-gray-500 dark:text-slate-400 mb-1">PCR</div>
               <div className="text-xl font-bold text-gray-900 dark:text-white">{pcr.toFixed(3)}</div>
               <div className={`text-xs ${pcrColor} mt-0.5`}>{pcrSentiment}</div>
             </div>
 
             {/* Max Pain */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-3 border border-gray-200 dark:border-slate-600">
+            <div className="surface-muted rounded-2xl p-3">
               <div className="text-xs text-gray-500 dark:text-slate-400 mb-1">Max Pain</div>
               <div className="text-xl font-bold text-gray-900 dark:text-white">₹{parseFloat(maxPain).toFixed(2)}</div>
             </div>
 
             {/* Total CE OI */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-3 border border-gray-200 dark:border-slate-600">
+            <div className="surface-muted rounded-2xl p-3">
               <div className="text-xs text-gray-500 dark:text-slate-400 mb-1">CE OI</div>
               <div className="text-xl font-bold text-green-500 dark:text-green-400">{formatLargeNumber(totalCEOI)}</div>
             </div>
 
             {/* Total PE OI */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-3 border border-gray-200 dark:border-slate-600">
+            <div className="surface-muted rounded-2xl p-3">
               <div className="text-xs text-gray-500 dark:text-slate-400 mb-1">PE OI</div>
               <div className="text-xl font-bold text-red-500 dark:text-red-400">{formatLargeNumber(totalPEOI)}</div>
             </div>
 
             {/* CE VS PE DOMINANCE */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-3 border border-gray-200 dark:border-slate-600">
+            <div className="surface-muted rounded-2xl p-3">
               <div className="text-xs text-gray-500 dark:text-slate-400 mb-1">CE VS PE DOMINANCE</div>
               <div className="flex justify-between text-xs mb-1.5">
                 <span className="text-green-500 dark:text-green-400">CE: {ceDominance}%</span>
@@ -85,7 +86,7 @@ export default function KeyMetrics({ data, metrics, compact = false }) {
             </div>
 
             {/* Change in OI */}
-            <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-3 border border-gray-200 dark:border-slate-600">
+            <div className="surface-muted rounded-2xl p-3">
               <div className="text-xs text-gray-500 dark:text-slate-400 mb-1">Change OI</div>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
@@ -156,7 +157,7 @@ export default function KeyMetrics({ data, metrics, compact = false }) {
 
   // Full vertical layout (original)
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700 shadow-sm dark:shadow-none">
+    <div className="glass-panel-strong rounded-3xl p-6">
       <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">KEY METRICS</h2>
       
       <div className="space-y-4">
@@ -289,4 +290,3 @@ export default function KeyMetrics({ data, metrics, compact = false }) {
     </div>
   )
 }
-

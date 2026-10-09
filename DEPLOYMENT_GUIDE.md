@@ -1,5 +1,11 @@
 # Deployment Guide for StrikeView
 
+> [!WARNING]
+> **Archived V1 reference — do not deploy V2 from this guide.**
+> Its legacy admin and Firestore instructions are not the V2 production security
+> model. Follow [`TRADE_ZONE_SETUP.md`](TRADE_ZONE_SETUP.md) exclusively for the
+> V1-Firebase-preserving V2 deployment, rules cutover, smoke tests, and rollback.
+
 ## 🚀 Pre-Deployment Checklist
 
 ### 1. Set SuperAdmin Email

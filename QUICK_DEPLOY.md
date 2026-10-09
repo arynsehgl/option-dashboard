@@ -1,5 +1,11 @@
 # Quick Deployment Guide
 
+> [!WARNING]
+> **Archived V1 reference — do not use these commands for the V2 release.**
+> The V2 release requires a reviewed PR plus coordinated Trade Worker, Supabase,
+> and V1 Firebase rules deployment. Use
+> [`TRADE_ZONE_SETUP.md`](TRADE_ZONE_SETUP.md) exclusively.
+
 ## Step 1: Set Your SuperAdmin Email
 
 **IMPORTANT**: Before deploying, you need to set your SuperAdmin email.

@@ -1,3 +1,4 @@
+/** Provides dashboard filters for strike, expiry, and options-chain views. */
 import React, { useState } from 'react'
 
 /**
@@ -16,8 +17,8 @@ export default function Filters({
   onShowLotMultiplierChange
 }) {
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700 shadow-sm dark:shadow-none">
-      <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">FILTERS</h2>
+    <div className="glass-panel-strong rounded-3xl p-5">
+      <h2 className="text-xs font-black uppercase tracking-[0.16em] mb-4 text-muted">Filters</h2>
       
       <div className="space-y-6">
         {/* Strike Range */}
@@ -120,4 +121,3 @@ export default function Filters({
     </div>
   )
 }
-

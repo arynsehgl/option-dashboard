@@ -1,122 +1,69 @@
-# BSE Integration Guide for SENSEX
+# BSE SENSEX Integration Guide
 
-## ✅ What's Been Implemented
+## Current Implementation
 
-1. **BSE Serverless Function** (`netlify/functions/fetchBSEData.js`)
-   - Fetches option chain data from BSE API
-   - Handles expiry date formatting (BSE format: "DD MMM YYYY")
-   - Returns BSE response structure
+- `netlify/functions/fetchBSEData.js` proxies the official BSE SENSEX endpoints with `scrip_cd=1`.
+- `src/utils/api-proxy.js` routes SENSEX requests to the BSE function and NSE symbols to the NSE function.
+- `src/utils/bseTransformer.js` converts BSE rows into the NSE-compatible structure consumed by the dashboard.
+- `src/pages/Dashboard.jsx` clears the previous symbol's expiry, ignores stale in-flight responses, and adopts the backend's canonical active expiry.
 
-2. **BSE to NSE Transformer** (`src/utils/bseTransformer.js`)
-   - Converts BSE API response to NSE-compatible format
-   - Maps BSE field names to NSE field names
-   - Ensures frontend works with both exchanges seamlessly
+## Expiry Catalogue
 
-3. **Updated API Proxy** (`src/utils/api-proxy.js`)
-   - Automatically routes SENSEX to BSE API
-   - Routes NSE symbols to NSE API
-   - Handles expiry date format conversion
+The BSE catalogue is read from `Table1[].ExpiryDate`. Values are trimmed and deduplicated while preserving BSE order. The function returns the complete catalogue to the dashboard even though it fetches only one option chain per request.
 
-4. **UI Updates**
-   - Added SENSEX to symbol selector in Header
-   - Added SENSEX lot size (default: 10 - needs verification)
+When the requested expiry is no longer active, the function uses the first active BSE expiry. A valid requested expiry is tried first without duplication.
 
-## ⚠️ Required Information from You
+## Upstream Access Recovery
 
-### 1. SENSEX Script Code (`scrip_cd`)
-The BSE API uses numeric script codes. You provided BANKEX with `scrip_cd=12`, but I need the code for SENSEX.
+BSE may return an Akamai HTTP 403 or an HTML denial page to a serverless request. For SENSEX only, the function:
 
-**Action Required:**
-- Find the `scrip_cd` for SENSEX from the BSE website or API
-- Update `netlify/functions/fetchBSEData.js` line 14:
-  ```javascript
-  const BSE_SCRIPT_CODES = {
-    SENSEX: 1, // ⚠️ UPDATE THIS with actual SENSEX scrip_cd
-    BANKEX: 12,
-  };
-  ```
+1. Uses one consistent full browser identity and the official SENSEX derivatives page as the Referer.
+2. Warms the official derivatives page at most once per function invocation after a 403 or HTML response.
+3. Retries the exact denied API request once.
+4. Returns HTTP 502 with `BSE_UPSTREAM_ACCESS_FAILED` if access is still denied.
 
-### 2. Verify SENSEX Lot Size
-I've set SENSEX lot size to 10, but please verify:
-- Update `src/utils/lotSizes.js` if different
+The retry is deliberately bounded. It does not use a residential proxy, headless-browser bypass, persistent cookie store, or guessed expiry dates after an access denial.
 
-### 3. BSE API Headers/Cookies
-Please test if the BSE API requires:
-- Session cookies (like NSE)
-- Specific headers
-- Authentication
+## Response Shape
 
-Currently, the function uses basic headers. If you encounter 403/401 errors, we may need to add cookie handling similar to NSE.
+The successful function response includes:
 
-## 🧪 Testing Instructions
-
-1. **Update SENSEX Script Code:**
-   - Open `netlify/functions/fetchBSEData.js`
-   - Update `SENSEX: 1` with the correct `scrip_cd`
-
-2. **Test Locally:**
-   ```bash
-   npm run dev:netlify
-   ```
-   - This starts the Netlify dev server with functions support
-
-3. **Test in Browser:**
-   - Select SENSEX from the symbol selector
-   - Check browser console for any errors
-   - Verify data loads correctly
-
-4. **Check Terminal Logs:**
-   - Look for "BSE Function called" messages
-   - Check for any API errors
-   - Verify the response structure
-
-## 📋 BSE API Response Structure
-
-The BSE API returns:
 ```json
 {
-  "Table": [...], // Array of strikes (both CE and PE in each row)
-  "ASON": { "DT_TM": "07 Jan 2026 | 19:11" },
-  "tot_C_Open_Interest": "...",
-  "tot_Open_Interest": "...",
-  "tot_Vol_Traded": "...",
-  "tot_C_Vol_Traded": "..."
+  "success": true,
+  "symbol": "SENSEX",
+  "expiry": "08 Oct 2026",
+  "source": "BSE",
+  "data": {
+    "Table": [],
+    "ASON": {},
+    "UlaValue": 0,
+    "expiryDates": [],
+    "totals": {}
+  }
 }
 ```
 
-Each row in `Table` contains:
-- `C_*` fields = Call options (CE)
-- Regular fields = Put options (PE)
-- `Strike_Price` or `Strike_Price1` = Strike price
-- `UlaValue` = Spot/Underlying price
-- `End_TimeStamp` = Expiry date
+`Table` contains call fields prefixed with `C_`, put fields without that prefix, the strike price, underlying value, and expiry timestamp. The transformer maps these fields into the common dashboard model.
 
-## 🔄 Data Flow
+## Local Validation
 
-1. User selects SENSEX → Frontend calls `fetchOptionChainData('SENSEX')`
-2. API Proxy detects BSE exchange → Calls `fetchBSEData()`
-3. BSE Function → Fetches from BSE API with correct `scrip_cd`
-4. BSE Response → Transformed to NSE format via `transformBSEToNSE()`
-5. Frontend → Receives NSE-compatible data, works seamlessly
+```bash
+npm run dev:netlify
+```
 
-## 🐛 Troubleshooting
+Then test:
 
-**If SENSEX doesn't load:**
-1. Check browser console for errors
-2. Verify `scrip_cd` is correct
-3. Check BSE API is accessible (CORS, authentication)
-4. Verify expiry date format is correct
+```text
+http://localhost:8888/.netlify/functions/fetchBSEData?symbol=SENSEX
+http://localhost:8888/.netlify/functions/fetchBSEData?symbol=SENSEX&expiry=15%20Oct%202026
+```
 
-**If data structure is wrong:**
-- Check `bseTransformer.js` field mappings
-- Compare BSE response fields with transformer
-- Update mappings if BSE API structure differs
+Validate direct success, a stale requested expiry, an active expiry, the final catalogue expiry, 403/HTML recovery, persistent-denial 502 behavior, and a NIFTY regression request.
 
-## 📝 Next Steps
+## Troubleshooting
 
-1. ✅ Provide SENSEX `scrip_cd`
-2. ✅ Verify lot size
-3. ✅ Test API access (cookies/headers if needed)
-4. ✅ Test full integration
-5. ✅ Deploy to Netlify
-
+- `BSE_UPSTREAM_ACCESS_FAILED`: BSE denied the serverless source even after the bounded warm-up retry.
+- Valid JSON with no contracts: confirm the expiry still has published option rows.
+- Correct backend data but incorrect dashboard fields: inspect `src/utils/bseTransformer.js` mappings.
+- Previous symbol or expiry appears after switching: verify the Dashboard request-generation guard remains intact.

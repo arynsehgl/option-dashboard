@@ -1,3 +1,4 @@
+/** Renders normalized call and put rows for the selected options chain. */
 import React from 'react'
 import { formatLargeNumber, formatCurrency, formatPercentageChange } from '../utils/formatNumber'
 import { getLotSize } from '../utils/lotSizes'
@@ -16,7 +17,7 @@ export default function OptionsChainTable({ data, spotPrice, symbol, showLotMult
 
   if (strikes.length === 0) {
     return (
-      <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 p-6 text-center shadow-sm dark:shadow-none">
+      <div className="glass-panel-strong rounded-3xl p-6 text-center">
         <p className="text-gray-500 dark:text-slate-400">No strike data available</p>
       </div>
     );
@@ -86,10 +87,10 @@ export default function OptionsChainTable({ data, spotPrice, symbol, showLotMult
   }, [strikes, showLotMultiplier, lotSize]);
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700 overflow-x-auto shadow-sm dark:shadow-none">
+    <div className="glass-panel-strong rounded-3xl overflow-x-auto">
       <div className="min-w-full">
         {/* Table Header */}
-        <div className="grid grid-cols-11 gap-0.5 bg-slate-200 dark:bg-slate-700 p-1.5 text-[10px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 sticky top-0 shadow-sm">
+        <div className="grid grid-cols-11 gap-0.5 bg-indigo-500/10 p-2 text-[10px] sm:text-xs font-black text-muted sticky top-0 shadow-sm">
           {/* CALLS Header */}
           <div className="col-span-5 text-center">
             <div className="text-green-400 mb-0.5 text-[10px] sm:text-xs">CALLS (CE)</div>
@@ -242,7 +243,7 @@ export default function OptionsChainTable({ data, spotPrice, symbol, showLotMult
         </div>
 
         {/* Bottom Summary Bar */}
-        <div className="sticky bottom-0 bg-gray-50 dark:bg-slate-900 border-t-2 border-gray-200 dark:border-slate-600 p-1.5 mt-1">
+        <div className="sticky bottom-0 bg-[var(--glass-strong)] border-t-2 border-[var(--glass-border)] p-2 mt-1 backdrop-blur-xl">
           <div className="grid grid-cols-11 gap-0.5 text-[10px] sm:text-xs font-semibold">
             {/* CALLS Totals */}
             <div className="col-span-5 grid grid-cols-5 gap-1 text-right">
@@ -285,4 +286,3 @@ export default function OptionsChainTable({ data, spotPrice, symbol, showLotMult
     </div>
   )
 }
-

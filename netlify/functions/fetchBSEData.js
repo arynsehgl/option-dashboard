@@ -10,10 +10,9 @@
  *   - expiry: Optional expiry date (format: "DD MMM YYYY", e.g., "29 Jan 2026")
  */
 
-// Symbol to BSE script code mapping
-// TODO: Update SENSEX code once you provide it. Using 1 as placeholder.
+// Official BSE index identifiers used by the derivatives option-chain API.
 const BSE_SCRIPT_CODES = {
-  SENSEX: 1, // TODO: Update with actual SENSEX scrip_cd
+  SENSEX: 1,
   BANKEX: 12,
 };
 

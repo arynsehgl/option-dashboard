@@ -1,5 +1,12 @@
 # Authentication & Subscription Setup Guide
 
+> [!WARNING]
+> **Archived V1 reference — do not use this file for V2 production setup.**
+> Some instructions below describe legacy Firestore rules, browser-managed admin
+> state, and an unfinished payment integration. For the supported V2 Firebase
+> continuity, security, deployment, cutover, and rollback procedure, use
+> [`TRADE_ZONE_SETUP.md`](TRADE_ZONE_SETUP.md) exclusively.
+
 This guide will help you set up Firebase authentication, user management, and PhonePe payment integration for StrikeView.
 
 ## 📋 What's Been Implemented
