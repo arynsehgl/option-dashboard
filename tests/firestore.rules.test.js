@@ -127,7 +127,7 @@ describe('Firestore profile rules', () => {
     })))
   })
 
-  it('keeps existing V1 ISO-date profiles readable and display-editable', async () => {
+  it('keeps an existing V1 administrator readable but prevents client demotion or elevation', async () => {
     await seedProfile('legacy-owner', {
       uid: 'legacy-owner',
       email: 'legacy@example.com',
@@ -140,10 +140,11 @@ describe('Firestore profile rules', () => {
       subscriptionPlan: 'legacy-pro',
       subscriptionEndDate: '2027-10-12T10:00:00.000Z',
       createdAt: Timestamp.now(),
-      isSuperAdmin: false,
+      isSuperAdmin: true,
     })
     const profileReference = doc(authenticatedFirestore('legacy-owner', 'legacy@example.com'), 'users', 'legacy-owner')
     await assertSucceeds(getDoc(profileReference))
     await assertSucceeds(updateDoc(profileReference, { name: 'Legacy User Updated', phone: '+91 90000 00000' }))
+    await assertFails(updateDoc(profileReference, { isSuperAdmin: false }))
   })
 })

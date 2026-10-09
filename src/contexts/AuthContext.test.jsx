@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest'
 import {
-  isVerifiedConfiguredSuperAdmin,
+  isConfiguredSuperAdmin,
   parseAccessInstant,
   profileHasActiveAccess,
   validateSignupProfile,
@@ -58,9 +58,10 @@ describe('AuthContext entitlement helpers', () => {
     expect(() => validateSignupProfile('Existing User', '1'.repeat(33))).toThrow('32 characters or fewer')
   })
 
-  it('derives browser admin state only from a verified authenticated email', () => {
-    expect(isVerifiedConfiguredSuperAdmin({ email: 'OWNER@example.com', emailVerified: true }, 'owner@example.com')).toBe(true)
-    expect(isVerifiedConfiguredSuperAdmin({ email: 'owner@example.com', emailVerified: false }, 'owner@example.com')).toBe(false)
-    expect(isVerifiedConfiguredSuperAdmin({ email: 'other@example.com', emailVerified: true }, 'owner@example.com')).toBe(false)
+  it('derives browser admin state only from the configured Firebase email match', () => {
+    expect(isConfiguredSuperAdmin({ email: ' OWNER@example.com ', emailVerified: true }, 'owner@example.com')).toBe(true)
+    expect(isConfiguredSuperAdmin({ email: 'owner@example.com', emailVerified: false }, 'owner@example.com')).toBe(true)
+    expect(isConfiguredSuperAdmin({ email: 'other@example.com', emailVerified: true }, 'owner@example.com')).toBe(false)
+    expect(isConfiguredSuperAdmin({ email: 'owner@example.com', emailVerified: true }, '')).toBe(false)
   })
 })

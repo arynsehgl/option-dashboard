@@ -76,24 +76,71 @@ describe('Firebase worker authentication', () => {
     expect(parseFirestoreInstant('invalid')).toBeNaN()
   })
 
-  it('does not trust a Firestore administrator flag without the verified configured email', () => {
-    const profile = buildAuthoritativeFirebaseProfile({
+  it('ignores Firestore administrator fields when the token email does not match configuration', () => {
+    const token = {
       uid: 'firebase-user-1',
-      email: 'attacker@example.com',
-      emailVerified: true,
-    }, {
+      email: 'member@example.com',
+      emailVerified: false,
+    }
+    const expiredProfile = { isTrialActive: false, subscriptionStatus: 'expired' }
+    expect(buildAuthoritativeFirebaseProfile(token, {
+      ...expiredProfile,
       isSuperAdmin: true,
-      isTrialActive: false,
-      subscriptionStatus: 'expired',
-    }, { superadminEmail: 'owner@example.com' })
-    expect(profile.access.isSuperAdmin).toBe(false)
-    expect(profile.access.entitled).toBe(false)
+    }, { superadminEmail: 'owner@example.com' }).access).toEqual(expect.objectContaining({
+      isSuperAdmin: false,
+      entitled: false,
+    }))
+    expect(buildAuthoritativeFirebaseProfile(token, {
+      ...expiredProfile,
+      isSuperAdmin: 'true',
+    }, { superadminEmail: 'owner@example.com' }).access).toEqual(expect.objectContaining({
+      isSuperAdmin: false,
+      entitled: false,
+    }))
   })
 
-  it('requires a verified email match before granting server-side super-admin access', () => {
+  it('grants server-side administrator access from a normalized configured token email', () => {
     const source = { isSuperAdmin: false, isTrialActive: false, subscriptionStatus: 'expired' }
-    expect(buildAuthoritativeFirebaseProfile({ uid: 'one', email: 'owner@example.com', emailVerified: false }, source, { superadminEmail: 'owner@example.com' }).access.isSuperAdmin).toBe(false)
+    expect(buildAuthoritativeFirebaseProfile({ uid: 'one', email: 'owner@example.com', emailVerified: false }, source, { superadminEmail: 'owner@example.com' }).access.isSuperAdmin).toBe(true)
     expect(buildAuthoritativeFirebaseProfile({ uid: 'one', email: 'OWNER@example.com', emailVerified: true }, source, { superadminEmail: 'owner@example.com' }).access.isSuperAdmin).toBe(true)
+  })
+
+  it('propagates a configured administrator through worker identity resolution', async () => {
+    const firebaseIdentity = createIdentity({
+      verifyIdToken: vi.fn().mockResolvedValue({
+        uid: 'firebase-user-1',
+        email: 'owner@example.com',
+        emailVerified: false,
+      }),
+      getUserProfile: vi.fn().mockResolvedValue({
+        name: 'Configured Administrator',
+        phone: '+919876543210',
+        trialStartDate: '2025-01-01T00:00:00.000Z',
+        trialEndDate: '2025-01-04T00:00:00.000Z',
+        isTrialActive: false,
+        subscriptionStatus: 'expired',
+        subscriptionPlan: null,
+        subscriptionEndDate: null,
+        isSuperAdmin: false,
+      }),
+    })
+    const supabase = createSupabase()
+    const request = {
+      header: vi.fn().mockReturnValue('Bearer firebase-id-token'),
+    } as unknown as Request
+    const response = createResponse()
+    const next = vi.fn() as NextFunction
+
+    await requireUser(firebaseIdentity, supabase, { superadminEmail: 'OWNER@example.com' })(request, response, next)
+
+    expect(supabase.rpc).toHaveBeenCalledWith('resolve_firebase_profile', expect.objectContaining({
+      p_is_super_admin: true,
+    }))
+    expect(request.user?.access).toEqual(expect.objectContaining({
+      isSuperAdmin: true,
+      entitled: true,
+    }))
+    expect(next).toHaveBeenCalledWith()
   })
 
   it('verifies revocation, links the internal profile, and preserves active subscriptions', async () => {
