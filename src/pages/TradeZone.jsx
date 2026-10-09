@@ -343,7 +343,7 @@ export default function TradeZone() {
   }
 
   /**
-   * Signs out of Stride and returns to the public landing page.
+   * Signs out of Strikeview and returns to the public landing page.
    */
   async function handleLogout() {
     await logout()
@@ -465,7 +465,7 @@ export default function TradeZone() {
             </section>
             <section className="grid min-w-0 gap-4 xl:grid-cols-[15.5rem_minmax(0,1fr)_19rem]">
               <Watchlist instruments={activeOverview.watchlist} selectedKey={selectedInstrument?.instrumentKey} onSelect={setSelectedInstrument} onSearch={workerConfigured ? searchInstruments : null} onAdd={workerConfigured ? addInstrument : null} />
-              {selectedInstrument ? <MarketChart instrument={selectedInstrument} candles={candles} interval={interval} onIntervalChange={setInterval} preview={demo} feedHealth={feedHealth} /> : <section className="glass-panel-strong grid min-h-[480px] place-items-center rounded-3xl p-8 text-center"><div><Search size={28} className="mx-auto text-indigo-500" /><h2 className="mt-4 text-xl font-black text-ink">{disconnected ? 'Connect live market data' : 'Build your watchlist'}</h2><p className="mt-2 max-w-sm text-sm text-muted">{disconnected ? 'Configure the Trade Worker and connect Kite; Stride will never substitute fixed values for a live feed.' : 'Search the Kite instrument master on the left and add a company, index, future, or option.'}</p></div></section>}
+              {selectedInstrument ? <MarketChart instrument={selectedInstrument} candles={candles} interval={interval} onIntervalChange={setInterval} preview={demo} feedHealth={feedHealth} /> : <section className="glass-panel-strong grid min-h-[480px] place-items-center rounded-3xl p-8 text-center"><div><Search size={28} className="mx-auto text-indigo-500" /><h2 className="mt-4 text-xl font-black text-ink">{disconnected ? 'Connect live market data' : 'Build your watchlist'}</h2><p className="mt-2 max-w-sm text-sm text-muted">{disconnected ? 'Configure the Trade Worker and connect Kite; Strikeview will never substitute fixed values for a live feed.' : 'Search the Kite instrument master on the left and add a company, index, future, or option.'}</p></div></section>}
               {selectedInstrument ? <OrderTicket instrument={selectedInstrument} environment={environment} connected={connected && workerConfigured} liveOrderingEnabled={LIVE_ORDERING_ENABLED} onSubmit={submitLiveOrder} onRefresh={() => loadOverview()} /> : <section className="glass-panel-strong rounded-3xl p-5"><p className="eyebrow">Order ticket</p><p className="mt-3 text-sm text-muted">Select an instrument to prepare an order.</p></section>}
             </section>
             <PortfolioTable holdings={activeOverview.holdings} preview={demo} environment={environment} />

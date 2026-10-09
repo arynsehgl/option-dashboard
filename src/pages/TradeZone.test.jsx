@@ -14,7 +14,7 @@ import {
   openMarketStream,
 } from '../features/trade-zone/tradeApi'
 
-vi.mock('../components/BrandMark', () => ({ default: () => 'Stride' }))
+vi.mock('../components/BrandMark', () => ({ default: () => 'Strikeview' }))
 vi.mock('../components/ThemeToggle', () => ({ default: () => null }))
 vi.mock('../components/ZoneRopeSwitch', () => ({ default: () => null }))
 vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ currentUser: { email: 'user@example.com' }, userData: { name: 'Test User' }, logout: vi.fn() }) }))

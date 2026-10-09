@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
         <section className="glass-panel-strong w-full rounded-[2rem] p-7 sm:p-9">
           <span className="eyebrow">Account recovery</span>
           <h1 className="mt-2 text-3xl font-black tracking-[-0.035em] text-ink">Reset your password</h1>
-          <p className="mt-3 leading-7 text-muted">Enter the email used for Stride. We will send the provider’s secure recovery link.</p>
+          <p className="mt-3 leading-7 text-muted">Enter the email used for Strikeview. We will send the provider’s secure recovery link.</p>
           {message && <div role="status" className="mt-5 rounded-xl border border-emerald-400/25 bg-emerald-500/10 p-3 text-sm text-emerald-500">{message}</div>}
           {error && <div role="alert" className="mt-5 rounded-xl border border-rose-400/25 bg-rose-500/10 p-3 text-sm text-rose-500">{error}</div>}
           <form onSubmit={handleSubmit} className="mt-6">

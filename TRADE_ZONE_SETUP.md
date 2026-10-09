@@ -1,4 +1,4 @@
-# Stride V2 Trade Zone — Production Setup
+# Strikeview V2 Trade Zone — Production Setup
 
 Trade Zone is a separate workspace beside the existing options Dashboard. The zone lobby and hanging rope switch move between them without changing Dashboard calculations or NSE/BSE proxy behavior.
 

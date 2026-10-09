@@ -18,7 +18,7 @@ const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
  * Displays a neutral branded loading state while a route bundle is fetched.
  */
 function RouteFallback() {
-  return <div className="app-background grid min-h-screen place-items-center"><div className="glass-panel-strong relative z-10 rounded-3xl px-9 py-7 text-center"><div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-indigo-500/20 border-t-indigo-500" /><p className="mt-3 text-sm font-bold text-muted">Opening Stride…</p></div></div>
+  return <div className="app-background grid min-h-screen place-items-center"><div className="glass-panel-strong relative z-10 rounded-3xl px-9 py-7 text-center"><div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-indigo-500/20 border-t-indigo-500" /><p className="mt-3 text-sm font-bold text-muted">Opening Strikeview…</p></div></div>
 }
 
 /**

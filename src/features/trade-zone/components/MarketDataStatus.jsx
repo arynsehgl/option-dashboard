@@ -27,7 +27,7 @@ export default function MarketDataStatus({
   if (!workerConfigured) {
     return (
       <section className="mb-5 flex flex-col gap-3 rounded-2xl border border-slate-400/25 bg-slate-500/10 p-4 text-sm sm:flex-row sm:items-center sm:justify-between" aria-label="Trade Worker status">
-        <div className="flex items-start gap-3"><ServerOff size={19} className="mt-0.5 shrink-0 text-slate-500" /><div><p className="font-black text-ink">Live market service is not configured</p><p className="mt-1 text-muted">Add the Trade Worker URL and start the worker before connecting Kite. Stride is showing an empty ₹10 lakh virtual account—not fake live prices.</p></div></div>
+        <div className="flex items-start gap-3"><ServerOff size={19} className="mt-0.5 shrink-0 text-slate-500" /><div><p className="font-black text-ink">Live market service is not configured</p><p className="mt-1 text-muted">Add the Trade Worker URL and start the worker before connecting Kite. Strikeview is showing an empty ₹10 lakh virtual account—not fake live prices.</p></div></div>
         <button type="button" onClick={onOpenDemo} className="btn-secondary shrink-0 text-xs"><FlaskConical size={15} />Open Demo Tour</button>
       </section>
     )
@@ -47,7 +47,7 @@ export default function MarketDataStatus({
     <section className={`mb-5 flex flex-col gap-3 rounded-2xl border p-4 text-sm sm:flex-row sm:items-center sm:justify-between ${healthy ? 'border-emerald-400/25 bg-emerald-500/10' : 'border-amber-400/25 bg-amber-500/10'}`} aria-label="Live market data status">
       <div className="flex items-start gap-3">
         <Radio size={19} className={`mt-0.5 shrink-0 ${healthy ? 'animate-pulse text-emerald-500' : 'text-amber-500'}`} />
-        <div><p className="font-black text-ink">{feedHealth.label}</p><p className="mt-1 text-muted">Kite supplies prices only. Playground fills remain inside Stride’s ₹10 lakh simulator and cannot reach Zerodha orders.</p></div>
+        <div><p className="font-black text-ink">{feedHealth.label}</p><p className="mt-1 text-muted">Kite supplies prices only. Playground fills remain inside Strikeview’s ₹10 lakh simulator and cannot reach Zerodha orders.</p></div>
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs font-bold text-muted">
         <span className="surface-muted inline-flex items-center gap-1.5 rounded-xl px-3 py-2"><Clock3 size={14} />{lastTickAt ? `Last tick ${new Date(lastTickAt).toLocaleTimeString('en-IN')}` : 'Waiting for first tick'}</span>

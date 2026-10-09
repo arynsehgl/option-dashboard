@@ -1,7 +1,7 @@
 {
   "name": "stride-options-trading-platform",
   "version": "2.0.0",
-  "description": "Stride options dashboard and guarded Trade Zone platform",
+  "description": "Strikeview options dashboard and guarded Trade Zone platform",
   "type": "module",
   "engines": {
     "node": ">=22.13.0"

@@ -141,7 +141,7 @@ describe('AuthContext account actions', () => {
     authMocks.getDoc.mockResolvedValue({ exists: () => false })
     await renderAuthProvider()
 
-    await expect(authContext.login(user.email, 'password')).rejects.toThrow('does not have a Stride profile')
+    await expect(authContext.login(user.email, 'password')).rejects.toThrow('does not have a Strikeview profile')
     expect(authMocks.setDoc).not.toHaveBeenCalled()
     expect(authMocks.signOut).toHaveBeenCalled()
     expect(authContext.isSuperAdmin).toBe(false)

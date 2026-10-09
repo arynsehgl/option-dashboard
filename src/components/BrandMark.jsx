@@ -1,8 +1,8 @@
-/** Renders the reusable Stride brand mark in compact and full layouts. */
+/** Renders the reusable Strikeview brand mark in compact and full layouts. */
 import React, { useId } from 'react'
 
 /**
- * Renders the Stride moving-path monogram and optional wordmark.
+ * Renders the Strikeview moving-path monogram and optional wordmark.
  */
 export default function BrandMark({ compact = false, className = '' }) {
   const gradientId = useId().replace(/:/g, '')
@@ -31,7 +31,7 @@ export default function BrandMark({ compact = false, className = '' }) {
       </span>
       {!compact && (
         <span>
-          <span className="block text-xl font-black tracking-[-0.045em] text-ink">Stride</span>
+          <span className="block text-xl font-black tracking-[-0.045em] text-ink">Strikeview</span>
           <span className="block text-[8px] font-extrabold uppercase tracking-[0.27em] text-muted">Move with clarity</span>
         </span>
       )}
